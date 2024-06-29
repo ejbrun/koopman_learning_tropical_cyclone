@@ -38,13 +38,27 @@ tests = [
 packages = ["klearn_tcyclone"]
 
 [tool.ruff]
-# Default configutations: https://docs.astral.sh/ruff/configuration/
-line-length = 88
 lint.select = ["E", "F", "B", "RUF", "PT", "UP", "C4", "D"]
 lint.ignore = ["RUF002"]
 extend-exclude = ["**/*ipynb", "tests/conftest.py", ".venv/**", "klearn_tcyclone/_types/_type_stubs/**"]
 target-version = "py311"
 
-[tool.ruff.lint.pydocstyle]
+[tool.lint.ruff.per-file-ignores]
+"__init"".py" = ["F401"]
+"test/conftest.py" = ["D103"]
+
+[tool.lint.ruff.pydocstyle]
+# Google style convention
 convention = "google"
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+include = ["klearn_tcyclone", "tests"]
+pythonVersion = "3.9"
+typeCheckingMode = "strict"
+stubPath = "klearn_tcyclone/_types/_type_stubs"
+reportPrivateUsage = False
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
