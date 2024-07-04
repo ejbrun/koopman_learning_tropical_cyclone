@@ -1,8 +1,8 @@
 # Koopman operator learning for Tropical Cylones
 
 In this repository I test the applicability of the Koopman operator framework to analyse
-and predict the dynamics of tropical cylones. Based on these prediction models, I try to
-assess risk and impact of future cyclone events on certain economic exposures.
+and predict the dynamics of tropical cylones. Based on these prediction models, I aim to 
+assess the impact and risk associated with furuter cyclone events.
 
 The Koopman operator allows to capture highly complex, nonlinear dyanmics in a infinite-dimensional linear operator.
 Based on this representation, we can for example perform spectral analysis of nonlinear systems. 
