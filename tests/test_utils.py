@@ -1,3 +1,5 @@
+"""Tests for utils.py."""
+
 from klearn_tcyclone.utils import check_time_steps_TCTracks
 from climada.hazard import TCTracks
 import xarray as xr
@@ -6,7 +8,7 @@ import numpy as np
 
 
 def test_check_time_steps_TCTracks():
-    """Test."""
+    """Test 1 for check_time_steps_TCTracks."""
     tc_tracks = TCTracks.from_ibtracs_netcdf(
         provider="usa", year_range=(1993, 1994), basin="EP", correct_pres=False
     )
@@ -18,7 +20,7 @@ def test_check_time_steps_TCTracks():
 
 
 def test_check_time_steps_TCTracks_2():
-    """Test."""
+    """Test 2 for check_time_steps_TCTracks."""
     hours = range(0, 33, 3)
     times = np.array(
         [dt.datetime(2000, 1, 1) + dt.timedelta(hours=x) for x in hours],
