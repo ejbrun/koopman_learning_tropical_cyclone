@@ -4,9 +4,13 @@ import warnings
 from climada.hazard import TCTracks
 import numpy as np
 from kooplearn.data import TrajectoryContextDataset, TensorContextDataset
+from scipy.spatial.distance import pdist
+from typing import Union
 
 
-def data_array_list_from_TCTracks(tc_tracks: TCTracks, feature_list: list[str]) -> list:
+def data_array_list_from_TCTracks(
+    tc_tracks: Union[TCTracks, list], feature_list: list[str]
+) -> list:
     """Create data array list from TCTracks.
 
     Args:
@@ -16,7 +20,12 @@ def data_array_list_from_TCTracks(tc_tracks: TCTracks, feature_list: list[str]) 
     Returns:
         list: _description_
     """
-    tc_data = tc_tracks.data
+    if isinstance(tc_tracks, TCTracks):
+        tc_data = tc_tracks.data
+    elif isinstance(tc_tracks, list):
+        tc_data = tc_tracks
+    else:
+        raise Exception("tc_track is of wrong type.")
 
     data_array_list = []
     for tc in tc_data:
@@ -41,12 +50,12 @@ def context_dataset_from_TCTracks(
         tc_tracks (TCTracks): _description_
         feature_list (list[str]): _description_
         context_length (int, optional): Length of the context window. Default to ``2``.
-        time_lag (int, optional): Time lag, i.e. stride, between successive context 
+        time_lag (int, optional): Time lag, i.e. stride, between successive context
             windows. Default to ``1``.
-        backend (str, optional): Specifies the backend to be used 
+        backend (str, optional): Specifies the backend to be used
             (``'numpy'``, ``'torch'``). If set to ``'auto'``, will use the same backend
-            of the trajectory. Default to ``'auto'``.        
-        **backend_kw (dict, optional): Keyword arguments to pass to the backend. 
+            of the trajectory. Default to ``'auto'``.
+        **backend_kw (dict, optional): Keyword arguments to pass to the backend.
             For example, if ``'torch'``, it is possible to specify the device of the
             tensor.
 
@@ -79,3 +88,22 @@ def context_dataset_from_TCTracks(
         context_data_array, backend, **backend_kw
     )
     return tensor_context_dataset
+
+
+def characteristic_length_scale_from_TCTracks(
+    tc_tracks: Union[TCTracks, list], feature_list: list[str], quantile: int = 0.5
+) -> float:
+    """Compute characteristic length scale from TCTracks data.
+
+    Args:
+        tc_tracks (Union[TCTracks, list]): _description_
+        feature_list (list[str]): _description_
+        quantile (int, optional): _description_. Defaults to 0.5.
+
+    Returns:
+        float: _description_
+    """
+    data_array_list = data_array_list_from_TCTracks(tc_tracks, feature_list)
+    quantiles = [np.quantile(pdist(data_array), quantile) for data_array in data_array_list]
+    mean_quantile = np.mean(quantiles)
+    return mean_quantile
