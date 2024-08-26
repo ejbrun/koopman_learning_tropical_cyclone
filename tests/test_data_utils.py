@@ -7,6 +7,8 @@ from klearn_tcyclone.data_utils import (
 from climada.hazard import TCTracks
 import numpy as np
 import pytest
+from klearn_tcyclone.data_utils import linear_transform
+from numpy.testing import assert_allclose
 
 
 def test_data_array_list_from_TCTracks():
@@ -60,3 +62,23 @@ def test_context_dataset_from_TCTracks(context_length):
     assert (
         len_tensor_context == len_tensor_context_check
     ), "Length of tensor context is wrong."
+
+
+def test_linear_transform():
+    """Test for linear_transform."""
+    min_vec = np.array([1,1])
+    max_vec = np.array([4,5])
+    target_min_vec = np.array([-1,-1])
+    target_max_vec = np.array([1,1])
+    data = np.array([[1,1], [1,5], [4,1], [4,5], [1,3]])
+
+    fun = linear_transform(min_vec, max_vec, target_min_vec, target_max_vec)
+    transformed_data = fun(data)
+    target = np.array([
+        [-1,-1],
+        [-1,1],
+        [1,-1],
+        [1,1],
+        [-1,0],
+    ])
+    assert_allclose(transformed_data, target)

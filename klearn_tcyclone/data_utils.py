@@ -6,6 +6,9 @@ import numpy as np
 from kooplearn.data import TrajectoryContextDataset, TensorContextDataset
 from scipy.spatial.distance import pdist
 from typing import Union
+from numpy.typing import NDArray
+from collections.abc import Callable
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 def data_array_list_from_TCTracks(
@@ -104,6 +107,124 @@ def characteristic_length_scale_from_TCTracks(
         float: _description_
     """
     data_array_list = data_array_list_from_TCTracks(tc_tracks, feature_list)
-    quantiles = [np.quantile(pdist(data_array), quantile) for data_array in data_array_list]
+    quantiles = [
+        np.quantile(pdist(data_array), quantile) for data_array in data_array_list
+    ]
     mean_quantile = np.mean(quantiles)
     return mean_quantile
+
+
+def linear_transform(
+    min_vec: NDArray, max_vec: NDArray, target_min_vec: NDArray, target_max_vec: NDArray
+) -> Callable:
+    """Generate a multidimensional linear transformation.
+
+    The transformation mapsp the rectangle with corners given by min_vec and max_vec to
+    the rectangle with corners given by target_min_vec and target_max_vec.
+
+    Args:
+        min_vec (NDArray): Lower corner of the input rectangle.
+        max_vec (NDArray): Upper corner of the intput rectangle.
+        target_min_vec (NDArray): Lower corner of the target rectangle.
+        target_max_vec (NDArray): Upper corner of the target rectangle.
+
+    Returns:
+        Callable: The linear transformation as a Callable.
+    """
+
+    def fun(data):
+        scaling_factor = (target_max_vec - target_min_vec) / (max_vec - min_vec)
+        diffs_to_min = data - min_vec
+        scaled_diffs_to_min_vec = scaling_factor * diffs_to_min
+        return scaled_diffs_to_min_vec + target_min_vec
+
+    return fun
+
+
+class LinearScalerError(Exception):
+    """A custom exception used to report errors in use of Timer class"""
+
+
+class LinearScaler:
+    """MinMaxScaler von sklearn is very similar.
+
+    However, MinMaxScaler does not allow to scale different dimensions to different
+    intervals. This functionality might be useful down the road.
+    """
+
+    def __init__(
+        self, target_min_vec=np.array([-1.0, -1.0]), target_max_vec=np.array([1.0, 1.0])
+    ):
+        self.target_min_vec = np.array(target_min_vec)
+        self.target_max_vec = np.array(target_max_vec)
+        self.min_vec = None
+        self.max_vec = None
+
+    def _linear_transform(self, data):
+        scaling_factor = (self.target_max_vec - self.target_min_vec) / (
+            self.max_vec - self.min_vec
+        )
+        diffs_to_min = data - self.min_vec
+        scaled_diffs_to_min_vec = scaling_factor * diffs_to_min
+        return scaled_diffs_to_min_vec + self.target_min_vec
+
+    def transform(self, data):
+        if self.min_vec is None or self.max_vec is None:
+            raise LinearScalerError(
+                "Cannot transform. You first have to call .fit_transform()."
+            )
+
+        return self._linear_transform(data)
+
+    def fit_transform(self, data):
+        self.max_vec = np.max(data, axis=0)
+        self.min_vec = np.min(data, axis=0)
+        return self.transform(data)
+
+
+def standardize_TensorContextDataset(
+    tensor_context: TensorContextDataset,
+    scaler: Union[StandardScaler, MinMaxScaler, LinearScaler],
+    fit: bool = True,
+    backend: str = "auto",
+    **backend_kw,
+) -> TensorContextDataset:
+    """Standardizes a TensorContextDataset.
+
+    Data standardization is performed by the scaler. Often used scalers are the
+    standard scaler, which scales each feature to zero mean and unit variance, or global
+    linear scaler, which transform the data by a affine linear transformation to a
+    target rectangular domain.
+
+    Args:
+        tensor_context (TensorContextDataset): _description_
+        scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
+        fit (bool, optional): _description_. Defaults to True.
+        backend (str, optional): _description_. Defaults to "auto".
+        **backend_kw (Any): _description_
+
+    Returns:
+        TensorContextDataset: _description_
+    """
+    if fit:
+        data_transformed = scaler.fit_transform(
+            tensor_context.data.reshape(
+                (
+                    tensor_context.shape[0] * tensor_context.shape[1],
+                    tensor_context.shape[2],
+                )
+            )
+        ).reshape(tensor_context.shape)
+    else:
+        data_transformed = scaler.transform(
+            tensor_context.data.reshape(
+                (
+                    tensor_context.shape[0] * tensor_context.shape[1],
+                    tensor_context.shape[2],
+                )
+            )
+        ).reshape(tensor_context.shape)
+    tensor_context_transformed = TensorContextDataset(
+        data_transformed, backend, **backend_kw
+    )
+    return tensor_context_transformed
