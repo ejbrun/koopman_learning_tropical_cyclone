@@ -2,6 +2,7 @@
 
 from klearn_tcyclone.performance_benchmark import timer
 import numpy as np
+from kooplearn.data import TensorContextDataset
 
 
 def runner(model, contexts, stop) -> dict:
@@ -34,3 +35,27 @@ def runner(model, contexts, stop) -> dict:
     print(print_str)
 
     return results
+
+
+def predict_context_shift(model, initial_context: TensorContextDataset):
+    next_step = model.predict(initial_context)
+    helper_array = np.concatenate(
+        [initial_context.data[:,1:], next_step],
+        axis=1
+    )
+    next_context = TensorContextDataset(
+        helper_array
+    )
+    return next_context
+
+
+def predict_time_series(model, initial_context: TensorContextDataset, n_steps: int):
+    time_series_data = np.empty(shape=(0,))
+    time_series_data = np.concatenate([time_series_data, [1,2,3]])
+    time_series_data = []
+    current_context = initial_context
+    for _ in range(n_steps):
+        current_context = predict_context_shift(model, current_context)
+        time_series_data.append(current_context.data[0,-1])
+    time_series_data = np.array(time_series_data)
+    return time_series_data
