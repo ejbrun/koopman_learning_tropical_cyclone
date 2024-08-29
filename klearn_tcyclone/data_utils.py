@@ -17,11 +17,11 @@ def data_array_list_from_TCTracks(
     """Create data array list from TCTracks.
 
     Args:
-        tc_tracks (TCTracks): _description_
-        feature_list (list[str]): _description_
+        tc_tracks (Union[TCTracks, list]): TCTRacks dataset.
+        feature_list (list[str]): List of features that are extracted.
 
     Returns:
-        list: _description_
+        list: List of data arrays.
     """
     if isinstance(tc_tracks, TCTracks):
         tc_data = tc_tracks.data

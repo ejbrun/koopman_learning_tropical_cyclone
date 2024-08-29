@@ -1,3 +1,5 @@
+
+from typing import Union
 from klearn_tcyclone.data_utils import (
     context_dataset_from_TCTracks,
     standardize_TensorContextDataset,
@@ -6,10 +8,32 @@ from klearn_tcyclone.models_utils import runner
 
 
 class ModelBenchmarkError(Exception):
-    """A custom exception used to report errors in use of Timer class"""
+    """A custom exception used to report errors in use of Timer class."""
 
 
 class ModelBenchmark:
+    """A class to represent a person.
+
+    TODO fix docstring
+    Attributes:
+    ----------
+    model : Any
+        The model that is trained and benchmarked.
+    features : list
+        List of features (of the tropical cylone dataset) on which the training is
+            performed.
+    scaler : Any
+        Scaler or method for data standardization.
+    context_length : int
+        Context length of the context windows (the Kooplearn data points)
+    results : Union[dict, list[dict]]
+        list of results.
+
+    Methods:
+    -------
+    info(additional=""):
+        Prints the person's name and age.
+    """
     def __init__(
         self,
         model,
@@ -21,15 +45,21 @@ class ModelBenchmark:
     ) -> None:
         self.model = model
         self.features = features
-        # self.tc_tracks_train = tc_tracks_train
-        # self.tc_tracks_test = tc_tracks_test
         self.scaler = scaler
         self.context_length = context_length
         self._set_tensor_contexts(tc_tracks_train, tc_tracks_test)
         self._results = None
 
     @property
-    def results(self):
+    def results(self)->Union[dict, list[dict]]: #TODO replace Unions by | and update python version
+        """Benchmark results.
+
+        Raises:
+            ModelBenchmarkError: _description_
+
+        Returns:
+            Union[dict, list[dict]]: List of dictionaries containing the results.
+        """
         if self._results is None:
             raise ModelBenchmarkError(
                 "No results yet. You first have to call .train_model()."
@@ -67,23 +97,32 @@ class ModelBenchmark:
     def get_info(self):
         """Prints information about the data."""
         print(
-            " ".join(
+            " ".join([
                 f"Train contexts have shape {self.tensor_context_train.shape}:",
                 f"{len(self.tensor_context_train)} contexts of length",
                 f"{self.tensor_context_train.context_length} with",
                 f"{self.tensor_context_train.shape[2]} features each.",
-            )
+            ])
         )
         print(
-            " ".join(
+            " ".join([
                 f"Test contexts have shape {self.tensor_context_test.shape}:",
                 f"{len(self.tensor_context_test)} contexts of length",
                 f"{self.tensor_context_test.context_length} with",
                 f"{self.tensor_context_test.shape[2]} features each.",
-            )
+            ])
         )
 
-    def train_model(self, train_stops: int | list[int]) -> dict | list[dict]:
+    def train_model(self, train_stops: Union[int, list[int]]) -> Union[dict, list[dict]]:
+        """Model training.
+
+        Args:
+            train_stops (Union[int, list[int]]): Maximum number of data points (context
+                windows) that are taken into account.
+
+        Returns:
+            Union[dict, list[dict]]: Results of the model training.
+        """
         self._standardize_data()
         tensor_contexts = {
             "train": self.tensor_context_train,
