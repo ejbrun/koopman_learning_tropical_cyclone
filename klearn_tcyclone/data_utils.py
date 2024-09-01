@@ -45,6 +45,7 @@ def context_dataset_from_TCTracks(
     context_length: int = 2,
     time_lag: int = 1,
     backend: str = "auto",
+    verbose: int = 0,
     **backend_kw,
 ) -> TensorContextDataset:
     """Generate context dataset from TCTRacks.
@@ -58,6 +59,7 @@ def context_dataset_from_TCTracks(
         backend (str, optional): Specifies the backend to be used
             (``'numpy'``, ``'torch'``). If set to ``'auto'``, will use the same backend
             of the trajectory. Default to ``'auto'``.
+        verbose (int, optional): Sets verbosity level. Default to 0 (no output).
         **backend_kw (dict, optional): Keyword arguments to pass to the backend.
             For example, if ``'torch'``, it is possible to specify the device of the
             tensor.
@@ -81,11 +83,11 @@ def context_dataset_from_TCTracks(
                 axis=0,
             )
         else:
-            warnings.warn(
-                f"""Data entry {idx} has been removed since it is shorter than the 
-                context_length.""",
-                stacklevel=2,
-            )
+            if verbose > 0:
+                print(
+                    f"""Data entry {idx} has been removed since it is shorter than the 
+                    context_length."""
+                )
 
     tensor_context_dataset = TensorContextDataset(
         context_data_array, backend, **backend_kw
