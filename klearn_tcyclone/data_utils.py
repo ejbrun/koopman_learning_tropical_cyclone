@@ -3,6 +3,7 @@
 import warnings
 from climada.hazard import TCTracks
 import numpy as np
+from xarray import Dataset
 from kooplearn.data import TrajectoryContextDataset, TensorContextDataset
 from scipy.spatial.distance import pdist
 from typing import Union
@@ -12,16 +13,16 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 def data_array_list_from_TCTracks(
-    tc_tracks: Union[TCTracks, list], feature_list: list[str]
-) -> list:
+    tc_tracks: Union[TCTracks, list[Dataset]], feature_list: list[str]
+) -> list[NDArray]:
     """Create data array list from TCTracks.
 
     Args:
-        tc_tracks (Union[TCTracks, list]): TCTRacks dataset.
+        tc_tracks (Union[TCTracks, list[Dataset]]): TCTRacks dataset.
         feature_list (list[str]): List of features that are extracted.
 
     Returns:
-        list: List of data arrays.
+        list[NDArray]: List of data arrays.
     """
     if isinstance(tc_tracks, TCTracks):
         tc_data = tc_tracks.data

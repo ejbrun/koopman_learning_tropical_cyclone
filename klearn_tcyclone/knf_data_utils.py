@@ -1,26 +1,51 @@
 """Utils for Koopman Neural Forecaster datat handling."""
 
-import torch
+from climada.hazard import TCTracks
 import numpy as np
-
-from numpy.typing import NDArray
+import torch
+from xarray import Dataset
+from typing import Union
+from klearn_tcyclone.data_utils import data_array_list_from_TCTracks
 
 
 class TCTrackDataset(torch.utils.data.Dataset):
-    """Dataset class for NBA player trajectory data."""
+    """Dataset class for NBA player trajectory data.
+
+    Attributes:
+    ----------
+    input_length: int
+        num of input steps.
+    output_length: int
+        forecasting horizon.
+    tc_tracks: Union[TCTracks, list[Dataset]]
+        TCTracks data from which the torch dataset is constructed.
+    feature_list: list[str]
+        List of features from the TCTracks data.
+    mode: str = "train"
+        train, validation or test.
+    jumps: int = 1
+        number of skipped steps between two sliding windows.
+    freq: None=None
+        Not needed, only there for consistency with other datasets.
+    """
 
     def __init__(
         self,
         input_length: int,  # num of input steps
         output_length: int,  # forecasting horizon
-        data_array_list: NDArray,
+        tc_tracks: Union[TCTracks, list[Dataset]],
+        feature_list: list[str],
         mode: str = "train",  # train, validation or test
         jumps: int = 1,  # number of skipped steps between two sliding windows
-        freq=None,
+        freq: None=None,
     ):
         self.input_length = input_length
         self.output_length = output_length
         self.mode = mode
+
+        data_array_list = data_array_list_from_TCTracks(
+            tc_tracks=tc_tracks, feature_list=feature_list
+        )
         self.data = data_array_list
 
         if mode == "test":
@@ -28,8 +53,8 @@ class TCTrackDataset(torch.utils.data.Dataset):
             self.ts_indices = []
             for i, item in enumerate(self.test_lsts):
                 for j in range(100, len(item) - output_length, output_length):
-            # for i in range(len(self.data)):
-            #     for j in range(50, 300 - output_length, 50):
+                    # for i in range(len(self.data)):
+                    #     for j in range(50, 300 - output_length, 50):
                     self.ts_indices.append((i, j))
         elif mode == "train" or "valid":
             # shuffle slices before split
