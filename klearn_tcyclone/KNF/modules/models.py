@@ -31,7 +31,7 @@
 """Pytorch implementation of Koopman Neural Operator."""
 import itertools
 
-from modules.normalizer import RevIN
+from klearn_tcyclone.KNF.modules.normalizer import RevIN
 import numpy as np
 import torch
 from torch import nn

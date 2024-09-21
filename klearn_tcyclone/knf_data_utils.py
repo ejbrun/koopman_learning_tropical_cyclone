@@ -1,10 +1,12 @@
 """Utils for Koopman Neural Forecaster datat handling."""
 
-from climada.hazard import TCTracks
+from typing import Union
+
 import numpy as np
 import torch
+from climada.hazard import TCTracks
 from xarray import Dataset
-from typing import Union
+
 from klearn_tcyclone.data_utils import data_array_list_from_TCTracks
 
 
@@ -37,7 +39,7 @@ class TCTrackDataset(torch.utils.data.Dataset):
         feature_list: list[str],
         mode: str = "train",  # train, validation or test
         jumps: int = 1,  # number of skipped steps between two sliding windows
-        freq: None=None,
+        freq: None = None,
     ):
         self.input_length = input_length
         self.output_length = output_length
@@ -51,7 +53,8 @@ class TCTrackDataset(torch.utils.data.Dataset):
         if mode == "test":
             # change the input length (<100) will not affect the target output
             self.ts_indices = []
-            for i, item in enumerate(self.test_lsts):
+            for i, item in enumerate(self.data):
+                # for i, item in enumerate(self.test_lsts):
                 for j in range(100, len(item) - output_length, output_length):
                     # for i in range(len(self.data)):
                     #     for j in range(50, 300 - output_length, 50):
