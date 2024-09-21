@@ -1,15 +1,16 @@
 """Utils for data processing."""
 
 import warnings
-from climada.hazard import TCTracks
-import numpy as np
-from xarray import Dataset
-from kooplearn.data import TrajectoryContextDataset, TensorContextDataset
-from scipy.spatial.distance import pdist
-from typing import Union
-from numpy.typing import NDArray
 from collections.abc import Callable
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from typing import Union
+
+import numpy as np
+from climada.hazard import TCTracks
+from kooplearn.data import TensorContextDataset, TrajectoryContextDataset
+from numpy.typing import NDArray
+from scipy.spatial.distance import pdist
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from xarray import Dataset
 
 
 def data_array_list_from_TCTracks(
@@ -199,6 +200,16 @@ def standardize_TensorContextDataset(
     linear scaler, which transform the data by a affine linear transformation to a
     target rectangular domain.
 
+    TODO At the moment the TensorContextDataset is standardized, by flattening into an
+    array of shape (-1, n_features). An alternative would be to standardize the
+    data_array_list (output of data_array_list_from_TCTracks), by concatenating all
+    arrays of shape (-1, n_features) in data_array_list. This latter approach is
+    implemented for the standardization of the KNF-adjusted dataset. The disadvantage
+    of the former approach is that there might be some bias induced towards data points
+    in the middle of the time series contained in data_array_list. This is because all
+    these time series are sampled with a slicing window to homogenize the format into a
+    dense array of time series of equal length, which is needed as input to the models.
+
     Args:
         tensor_context (TensorContextDataset): _description_
         scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
@@ -231,3 +242,55 @@ def standardize_TensorContextDataset(
         data_transformed, backend, **backend_kw
     )
     return tensor_context_transformed
+
+
+def concatenate_time_series_list(time_series_list: list[NDArray]):
+    concatenated_time_series = np.concatenate(time_series_list, axis=0)
+    return concatenated_time_series
+
+
+def time_series_list_from_concatenated_time_series(
+    concatenated_time_series: NDArray, length_list: list[int]
+):
+    time_series_list = []
+    counter = 0
+    for length in length_list:
+        time_series_list.append(concatenated_time_series[counter : counter + length])
+        counter = counter + length
+
+    return time_series_list
+
+
+def standardize_time_series_list(
+    time_series_list: list[NDArray],
+    scaler: Union[StandardScaler, MinMaxScaler, LinearScaler],
+    fit: bool = True,
+) -> list[NDArray]:
+    """Standardizes a TensorContextDataset.
+
+    Data standardization is performed by the scaler. Often used scalers are the
+    standard scaler, which scales each feature to zero mean and unit variance, or global
+    linear scaler, which transform the data by a affine linear transformation to a
+    target rectangular domain.
+
+    Args:
+        time_series_list (TensorContextDataset): _description_
+        scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
+        fit (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        TensorContextDataset: _description_
+    """
+    length_list = [len(da) for da in time_series_list]
+    concatenated_time_series = concatenate_time_series_list(time_series_list)
+    if fit:
+        rescaled_concatenated_time_series = scaler.fit_transform(
+            concatenated_time_series
+        )
+    else:
+        rescaled_concatenated_time_series = scaler.transform(concatenated_time_series)
+
+    rescaled_time_series_list = time_series_list_from_concatenated_time_series(
+        rescaled_concatenated_time_series, length_list
+    )
+    return rescaled_time_series_list

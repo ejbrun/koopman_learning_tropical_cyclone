@@ -1,14 +1,19 @@
 """Tests for utils.py."""
 
-from klearn_tcyclone.data_utils import (
-    data_array_list_from_TCTracks,
-    context_dataset_from_TCTracks,
-)
-from climada.hazard import TCTracks
 import numpy as np
 import pytest
-from klearn_tcyclone.data_utils import linear_transform
+from climada.hazard import TCTracks
 from numpy.testing import assert_allclose
+
+from klearn_tcyclone.data_utils import (
+    LinearScaler,
+    concatenate_time_series_list,
+    context_dataset_from_TCTracks,
+    data_array_list_from_TCTracks,
+    linear_transform,
+    standardize_time_series_list,
+    time_series_list_from_concatenated_time_series,
+)
 
 
 def test_data_array_list_from_TCTracks():
@@ -66,19 +71,65 @@ def test_context_dataset_from_TCTracks(context_length):
 
 def test_linear_transform():
     """Test for linear_transform."""
-    min_vec = np.array([1,1])
-    max_vec = np.array([4,5])
-    target_min_vec = np.array([-1,-1])
-    target_max_vec = np.array([1,1])
-    data = np.array([[1,1], [1,5], [4,1], [4,5], [1,3]])
+    min_vec = np.array([1, 1])
+    max_vec = np.array([4, 5])
+    target_min_vec = np.array([-1, -1])
+    target_max_vec = np.array([1, 1])
+    data = np.array([[1, 1], [1, 5], [4, 1], [4, 5], [1, 3]])
 
     fun = linear_transform(min_vec, max_vec, target_min_vec, target_max_vec)
     transformed_data = fun(data)
-    target = np.array([
-        [-1,-1],
-        [-1,1],
-        [1,-1],
-        [1,1],
-        [-1,0],
-    ])
+    target = np.array(
+        [
+            [-1, -1],
+            [-1, 1],
+            [1, -1],
+            [1, 1],
+            [-1, 0],
+        ]
+    )
     assert_allclose(transformed_data, target)
+
+
+def test_concatenate_time_series_list():
+    """Test for test_concatenate_time_series_list."""
+    time_series_list = [
+        np.random.normal(0, 1, (length, 2)) for length in np.random.randint(10, 20, 5)
+    ]
+    concatenated_time_series = concatenate_time_series_list(time_series_list)
+    length_list = [len(da) for da in time_series_list]
+
+    assert concatenated_time_series.shape == (np.sum(length_list), 2)
+
+
+def test_time_series_list_from_concatenated_time_series():
+    """Test for test_time_series_list_from_concatenated_time_series."""
+    time_series_list = [
+        np.random.normal(0, 1, (length, 2)) for length in np.random.randint(10, 20, 5)
+    ]
+    concatenated_time_series = concatenate_time_series_list(time_series_list)
+    length_list = [len(da) for da in time_series_list]
+    time_series_list_test = time_series_list_from_concatenated_time_series(
+        concatenated_time_series, length_list
+    )
+    is_equal = [
+        np.all(time_series_list[idx] == time_series_list_test[idx])
+        for idx in range(len(time_series_list))
+    ]
+    assert np.all(is_equal)
+
+
+def test_standardize_time_series_list():
+    """Test for test_standardize_time_series_list."""
+    time_series_list = [
+        np.random.normal(0, 1, (length, 2)) for length in np.random.randint(10, 20, 5)
+    ]
+    scaler = LinearScaler()
+    rescaled_time_series_list = standardize_time_series_list(
+        time_series_list, scaler=scaler, fit=True
+    )
+    is_equal_shape = [
+        time_series_list[idx].shape == rescaled_time_series_list[idx].shape
+        for idx in range(len(time_series_list))
+    ]
+    assert np.all(is_equal_shape)

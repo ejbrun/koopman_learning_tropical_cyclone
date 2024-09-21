@@ -5,9 +5,14 @@ from typing import Union
 import numpy as np
 import torch
 from climada.hazard import TCTracks
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xarray import Dataset
 
-from klearn_tcyclone.data_utils import data_array_list_from_TCTracks
+from klearn_tcyclone.data_utils import (
+    LinearScaler,
+    data_array_list_from_TCTracks,
+    standardize_time_series_list,
+)
 
 
 class TCTrackDataset(torch.utils.data.Dataset):
@@ -39,16 +44,37 @@ class TCTrackDataset(torch.utils.data.Dataset):
         feature_list: list[str],
         mode: str = "train",  # train, validation or test
         jumps: int = 1,  # number of skipped steps between two sliding windows
+        scaler: Union[StandardScaler, MinMaxScaler, LinearScaler, None] = None,
+        fit: Union[bool, None] = None,
         freq: None = None,
     ):
+        assert mode in [
+            "train",
+            "valid",
+            "test",
+        ], "Mode can only be one of train, valid, test"
+
         self.input_length = input_length
         self.output_length = output_length
         self.mode = mode
 
-        data_array_list = data_array_list_from_TCTracks(
+        time_series_list = data_array_list_from_TCTracks(
             tc_tracks=tc_tracks, feature_list=feature_list
         )
-        self.data = data_array_list
+
+        # Data standardization
+        if scaler is not None:
+            if fit is None:
+                if mode == "train":
+                    fit = True
+                elif mode == "valid":
+                    fit = False
+                elif mode == "test":
+                    fit = False
+            time_series_list = standardize_time_series_list(
+                time_series_list, scaler=scaler, fit=fit
+            )
+        self.data = time_series_list
 
         if mode == "test":
             # change the input length (<100) will not affect the target output
