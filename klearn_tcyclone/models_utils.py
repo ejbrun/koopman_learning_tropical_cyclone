@@ -1,12 +1,16 @@
 """Utils for models."""
 
-from klearn_tcyclone.performance_benchmark import timer
+from typing import Union
+
 import numpy as np
-from numpy.typing import NDArray
 from kooplearn.data import TensorContextDataset
+from kooplearn.models import Kernel, NystroemKernel
+from numpy.typing import NDArray
+
+from klearn_tcyclone.performance_benchmark import timer
 
 
-def runner(model, contexts, stop: int) -> dict:
+def runner(model: Union[Kernel, NystroemKernel], contexts, stop: int) -> dict:
     """Runs the model training.
 
     Args:
@@ -51,7 +55,7 @@ def runner(model, contexts, stop: int) -> dict:
 
 
 def predict_context_shift(
-    model, initial_context: TensorContextDataset
+    model: Union[Kernel, NystroemKernel], initial_context: TensorContextDataset
 ) -> TensorContextDataset:
     """Predict the next context windows based on the initial_context_window.
 
@@ -71,7 +75,9 @@ def predict_context_shift(
 
 
 def predict_time_series(
-    model, initial_context: TensorContextDataset, n_steps: int
+    model: Union[Kernel, NystroemKernel],
+    initial_context: TensorContextDataset,
+    n_steps: int,
 ) -> NDArray:
     """Predict time series based on initial context window.
 
@@ -83,12 +89,10 @@ def predict_time_series(
     Returns:
         NDArray: _description_
     """
-    time_series_data = np.empty(shape=(0,))
-    time_series_data = np.concatenate([time_series_data, [1, 2, 3]])
     time_series_data = []
     current_context = initial_context
     for _ in range(n_steps):
         current_context = predict_context_shift(model, current_context)
-        time_series_data.append(current_context.data[0, -1])
-    time_series_data = np.array(time_series_data)
+        time_series_data.append(current_context.data[:, -1])
+    time_series_data = np.array(time_series_data).transpose((1, 0, 2))
     return time_series_data
