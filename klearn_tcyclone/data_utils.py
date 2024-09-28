@@ -1,10 +1,10 @@
 """Utils for data processing."""
 
-import warnings
 from collections.abc import Callable
 from typing import Union
 
 import numpy as np
+import xarray as xr
 from climada.hazard import TCTracks
 from kooplearn.data import TensorContextDataset, TrajectoryContextDataset
 from numpy.typing import NDArray
@@ -97,6 +97,55 @@ def context_dataset_from_TCTracks(
     return tensor_context_dataset
 
 
+def TCTracks_from_TensorContextDataset(
+    tensor_context: TensorContextDataset, feature_list: list[str]
+):
+    new_xarr_list = []
+    len_time_series = tensor_context.shape[1]
+    n_features = tensor_context.shape[2]
+    assert len(feature_list) == n_features
+    is_admissible = (
+        "lat" in feature_list
+        and "lon" in feature_list
+        and "max_sustained_wind" in feature_list
+    )
+    assert (
+        is_admissible
+    ), "'lat', 'lon' and 'max_sustained_wind' must be in feature_list."
+
+    for t_context in tensor_context:
+        time_data = np.linspace(0, 1, len_time_series)
+        data_helper = {}
+        data_helper["time"] = time_data
+        for idx, key in enumerate(feature_list):
+            data_helper[key] = t_context[:, idx]
+
+        data_vars = {
+            # 'radius_max_wind': ('time', track_ds.rmw.data),
+            # 'radius_oci': ('time', track_ds.roci.data),
+            "max_sustained_wind": ("time", data_helper["max_sustained_wind"]),
+            # 'central_pressure': ('time', track_ds.pres.data),
+            # 'environmental_pressure': ('time', track_ds.poci.data),
+        }
+        coords = {
+            "time": ("time", data_helper["time"]),
+            "lat": ("time", data_helper["lat"]),
+            "lon": ("time", data_helper["lon"]),
+        }
+        attrs = {
+            # 'max_sustained_wind_unit': 'kn',
+            # 'central_pressure_unit': 'mb',
+            "orig_event_flag": True,
+            # 'data_provider': provider_str,
+            # 'category': category[i_track],
+        }
+
+        xarr = xr.Dataset(data_vars, coords=coords, attrs=attrs)
+        new_xarr_list.append(xarr)
+
+    return TCTracks(new_xarr_list)
+
+
 def characteristic_length_scale_from_TCTracks(
     tc_tracks: Union[TCTracks, list], feature_list: list[str], quantile: int = 0.5
 ) -> float:
@@ -156,11 +205,9 @@ class LinearScaler:
     intervals. This functionality might be useful down the road.
     """
 
-    def __init__(
-        self, target_min_vec=np.array([-1.0, -1.0]), target_max_vec=np.array([1.0, 1.0])
-    ):
-        self.target_min_vec = np.array(target_min_vec)
-        self.target_max_vec = np.array(target_max_vec)
+    def __init__(self, target_min_vec=None, target_max_vec=None):
+        self.target_min_vec = target_min_vec
+        self.target_max_vec = target_max_vec
         self.min_vec = None
         self.max_vec = None
 
@@ -172,6 +219,16 @@ class LinearScaler:
         scaled_diffs_to_min_vec = scaling_factor * diffs_to_min
         return scaled_diffs_to_min_vec + self.target_min_vec
 
+    def _linear_transform_2(
+        self, data, input_min_vec, input_max_vec, target_min_vec, target_max_vec
+    ):
+        scaling_factor = (target_max_vec - target_min_vec) / (
+            input_max_vec - input_min_vec
+        )
+        diffs_to_min = data - input_min_vec
+        scaled_diffs_to_min_vec = scaling_factor * diffs_to_min
+        return scaled_diffs_to_min_vec + target_min_vec
+
     def transform(self, data):
         if self.min_vec is None or self.max_vec is None:
             raise LinearScalerError(
@@ -180,7 +237,25 @@ class LinearScaler:
 
         return self._linear_transform(data)
 
+    def inverse_transform(self, data):
+        if self.min_vec is None or self.max_vec is None:
+            raise LinearScalerError(
+                "Cannot inverse-transform. You first have to call .fit_transform()."
+            )
+        inverse_transformed_data = self._linear_transform_2(
+            data,
+            input_min_vec=self.target_min_vec,
+            input_max_vec=self.target_max_vec,
+            target_min_vec=self.min_vec,
+            target_max_vec=self.max_vec,
+        )
+        return inverse_transformed_data
+
     def fit_transform(self, data):
+        if self.target_min_vec is None:
+            self.target_min_vec = np.array([-1.0 for _ in range(data.shape[-1])])
+        if self.target_max_vec is None:
+            self.target_max_vec = np.array([1.0 for _ in range(data.shape[-1])])
         self.max_vec = np.max(data, axis=0)
         self.min_vec = np.min(data, axis=0)
         return self.transform(data)
