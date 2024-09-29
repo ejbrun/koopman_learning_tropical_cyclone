@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from climada.hazard import TCTracks
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 from numpy.testing import assert_allclose
 
 from klearn_tcyclone.data_utils import (

@@ -1,3 +1,4 @@
+"""Customize TCTracks methods."""
 
 import cartopy.crs as ccrs
 import climada.util.coordinates as u_coord
@@ -17,7 +18,15 @@ from matplotlib.lines import Line2D
 
 
 class TCTracks(qTCTracks):
-    def plot(self, axis=None, figsize=(9, 13), legend=True, adapt_fontsize=True, linestyle = None, **kwargs):
+    def plot(
+        self,
+        axis=None,
+        figsize=(9, 13),
+        legend=True,
+        adapt_fontsize=True,
+        linestyle=None,
+        **kwargs,
+    ):
         """Track over earth. Historical events are blue, probabilistic black.
 
         Parameters
@@ -39,13 +48,13 @@ class TCTracks(qTCTracks):
         -------
         axis : matplotlib.axes._subplots.AxesSubplot
         """
-        if 'lw' not in kwargs:
-            kwargs['lw'] = 2
-        if 'transform' not in kwargs:
-            kwargs['transform'] = ccrs.PlateCarree()
+        if "lw" not in kwargs:
+            kwargs["lw"] = 2
+        if "transform" not in kwargs:
+            kwargs["transform"] = ccrs.PlateCarree()
 
         if not self.size:
-            LOGGER.info('No tracks to plot')
+            LOGGER.info("No tracks to plot")
             return None
 
         extent = self.get_extent(deg_buffer=1)
@@ -53,10 +62,12 @@ class TCTracks(qTCTracks):
 
         if not axis:
             proj = ccrs.PlateCarree(central_longitude=mid_lon)
-            _, axis, _ = u_plot.make_map(proj=proj, figsize=figsize, adapt_fontsize=adapt_fontsize)
+            _, axis, _ = u_plot.make_map(
+                proj=proj, figsize=figsize, adapt_fontsize=adapt_fontsize
+            )
         else:
             proj = axis.projection
-        axis.set_extent(extent, crs=kwargs['transform'])
+        axis.set_extent(extent, crs=kwargs["transform"])
         u_plot.add_shapes(axis)
 
         cmap = ListedColormap(colors=CAT_COLORS)
@@ -80,21 +91,26 @@ class TCTracks(qTCTracks):
             if linestyle is None:
                 linestyle = "solid"
             track_lc = LineCollection(
-                segments, linestyle=linestyle if track.orig_event_flag else ':',
-                cmap=cmap, norm=norm, **kwargs)
+                segments,
+                linestyle=linestyle if track.orig_event_flag else ":",
+                cmap=cmap,
+                norm=norm,
+                **kwargs,
+            )
             track_lc.set_array(track.max_sustained_wind.values)
             axis.add_collection(track_lc)
 
         if legend:
-            leg_lines = [Line2D([0], [0], color=CAT_COLORS[i_col], lw=2)
-                         for i_col in range(len(SAFFIR_SIM_CAT))]
+            leg_lines = [
+                Line2D([0], [0], color=CAT_COLORS[i_col], lw=2)
+                for i_col in range(len(SAFFIR_SIM_CAT))
+            ]
             leg_names = [CAT_NAMES[i_col] for i_col in sorted(CAT_NAMES.keys())]
             if any(not tr.orig_event_flag for tr in self.data):
-                leg_lines.append(Line2D([0], [0], color='grey', lw=2, ls='solid'))
-                leg_lines.append(Line2D([0], [0], color='grey', lw=2, ls=':'))
-                leg_names.append('Historical')
-                leg_names.append('Synthetic')
+                leg_lines.append(Line2D([0], [0], color="grey", lw=2, ls="solid"))
+                leg_lines.append(Line2D([0], [0], color="grey", lw=2, ls=":"))
+                leg_names.append("Historical")
+                leg_names.append("Synthetic")
             axis.legend(leg_lines, leg_names, loc=0)
         plt.tight_layout()
         return axis
-

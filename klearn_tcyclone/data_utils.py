@@ -5,12 +5,13 @@ from typing import Union
 
 import numpy as np
 import xarray as xr
-from climada.hazard import TCTracks
 from kooplearn.data import TensorContextDataset, TrajectoryContextDataset
 from numpy.typing import NDArray
 from scipy.spatial.distance import pdist
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xarray import Dataset
+
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 
 
 def data_array_list_from_TCTracks(
@@ -141,6 +142,45 @@ def TCTracks_from_TensorContextDataset(
         }
 
         xarr = xr.Dataset(data_vars, coords=coords, attrs=attrs)
+        new_xarr_list.append(xarr)
+
+    return TCTracks(new_xarr_list)
+
+
+def generate_reduced_tc_tracks(tc_tracks: TCTracks) -> TCTracks:
+    new_xarr_list = []
+    for tc_track in tc_tracks.data:
+        time_data = tc_track["time"].data
+        lat_data = tc_track["lat"].data
+        lon_data = tc_track["lon"].data
+        max_sustained_wind_data = tc_track["max_sustained_wind"].data
+
+        data_vars = {
+            # 'radius_max_wind': ('time', track_ds.rmw.data),
+            # 'radius_oci': ('time', track_ds.roci.data),
+            "max_sustained_wind": ("time", max_sustained_wind_data),
+            # 'central_pressure': ('time', track_ds.pres.data),
+            # 'environmental_pressure': ('time', track_ds.poci.data),
+        }
+        coords = {
+            "time": ("time", time_data),
+            "lat": ("time", lat_data),
+            "lon": ("time", lon_data),
+        }
+        attrs = {
+            # 'max_sustained_wind_unit': 'kn',
+            # 'central_pressure_unit': 'mb',
+            "orig_event_flag": True,
+            # 'data_provider': provider_str,
+            # 'category': category[i_track],
+        }
+
+        xarr = xr.Dataset(data_vars, coords=coords, attrs=attrs)
+        # print(type(tc_track), tc_track.orig_event_flag)
+        # if tc_track.orig_event_flag:
+        #     xarr.orig_event_flat = True
+        # else:
+        #     xarr.orig_event_flat = False
         new_xarr_list.append(xarr)
 
     return TCTracks(new_xarr_list)

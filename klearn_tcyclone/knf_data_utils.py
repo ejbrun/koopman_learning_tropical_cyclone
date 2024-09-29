@@ -4,7 +4,7 @@ from typing import Union
 
 import numpy as np
 import torch
-from climada.hazard import TCTracks
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xarray import Dataset
 
