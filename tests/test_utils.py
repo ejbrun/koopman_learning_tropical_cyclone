@@ -1,7 +1,7 @@
 """Tests for utils.py."""
 
 from klearn_tcyclone.utils import check_time_steps_TCTracks
-from climada.hazard import TCTracks
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 import xarray as xr
 import datetime as dt
 import numpy as np

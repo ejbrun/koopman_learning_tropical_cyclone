@@ -1,7 +1,7 @@
 """Utils for testing. This should be moved to a conftest.py file in future."""
 
 from klearn_tcyclone.data_utils import context_dataset_from_TCTracks
-from climada.hazard import TCTracks
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 from kooplearn.models import Kernel
 from sklearn.gaussian_process.kernels import RBF
 from klearn_tcyclone.data_utils import characteristic_length_scale_from_TCTracks

@@ -1,7 +1,7 @@
 """Utils for klearn_tcyclone."""
 
 import numpy as np
-from climada.hazard import TCTracks
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 
 
 def check_time_steps_TCTracks(tc_tracks: TCTracks, time_step_h: int) -> bool:
