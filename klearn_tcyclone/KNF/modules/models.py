@@ -315,6 +315,12 @@ class Koopman(nn.Module):
     for i in range(inps.shape[1] - 1):
       if self.add_global_operator:
         forw = self.global_linear_transform(forw)
+      # TODO Note that local_transform is constant over this loop over the lookback
+      # window, and also constant over the forward prediction loop below.
+      # The local Koopman operator is multiplicatively applied after the global Koopman
+      # operator, according to the paper it should be additive.
+      # einsum indices: b: batch; n: ?; l, h: dimension of the Koopman operator and the 
+      # vector of observations.
       forw = torch.einsum("bnl, blh -> bnh", forw, local_transform)
       inp_embed_preds.append(forw)
     embed_preds = torch.cat(inp_embed_preds, dim=1)
@@ -391,10 +397,15 @@ class Koopman(nn.Module):
 
       for i in range(auto_steps):
         try:
+          # org_inps.shape (batch_size, input_length, num_feats)
+          # tgts.shape (batch_size, num_steps, num_feats)
           inps = org_inps.reshape(org_inps.shape[0], -1, self.input_dim,
                                   self.num_feats)
+          # inps.shape (batch_size, input_length/input_dim, input_dim, num_feats)
+          # input_length must be divisible by input_dim
           inps = inps.reshape(org_inps.shape[0], -1,
                               self.input_dim * self.num_feats)
+          # inps.shape (batch_size, input_length/input_dim, input_dim * num_feats)
         except ValueError as valueerror:
           raise ValueError(
               "Input length is not divisible by input dim") from valueerror
