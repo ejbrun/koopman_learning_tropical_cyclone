@@ -41,3 +41,24 @@ pip install -e .
 ```
 to install the project.
 
+
+## Project description
+
+### TODOs
+
+- [x] conversion of tropical cyclone data into pytorch dataloader framework
+- [x] test KNF on tropical cyclone data
+- [ ] visualize predicted curves from klearn and KNF
+- [ ] implement model prediction for time series of arbitrary length (at the moment a certain context length of the dataset is fixed, koopman kernel model is only able to predict for time series of that length) 
+- [ ] improve KNF, e.g. exchange the attention mechanism with a more efficient kernel attention mechanism
+
+### Interesting questions:
+
+Observables/measurement functions: Almost all observables of the KNF are linear functions of the system state $x$ and do not couple the coordinates $x_i$. For examp, they are
+of the form $\sin(\sum_i c_i x_j(t_i))$ with learned coefficients $c_i$. The $j$-th coordinate $x_j(t_i)$ of the dynamical state is evaluated in a short time-window $[t_0, t_1, \dots]$
+discretized by the $t_i$. Hence, the input of the $\sin$ is not even a linear superposition of different coordinates, it's only a linear superposition of the same coordinate at some previous time steps.
+Furthermore there is a hugh redundancy in the measurement functions. For example, the function $\sin(\sum_i c_i x_j(t_i))$ is contained a couple of times, each time with separate trainable $c_i$.
+The only non-linear functions included in the observables are simple products (only second order) of the form $x_i x_j$.
+
+It would be interesting to improve the set of observables, i.e. to reduce the redundancy (-> improve time complexity by keeping same performance) and to include more (and maybe more suitable)
+nonlinear observables, i.e. interactions (-> improve performance). So far the interactions $x_i x_j$ are the only observables that depend on more than one coordinate.
