@@ -135,7 +135,8 @@ class Koopman(nn.Module):
                num_heads=1,
                transformer_dim=128,
                transformer_num_layers=3,
-               dropout_rate=0):
+               dropout_rate=0,
+               global_local_combination: str = "additive"):
 
     super().__init__()
     self.input_dim = input_dim
@@ -149,6 +150,11 @@ class Koopman(nn.Module):
     self.add_control = add_control
     self.add_global_operator = add_global_operator
     self.num_feats = num_feats
+    if global_local_combination not in ["additive", "multiplicative"]:
+      raise Exception(
+        "global_local_combination must be either 'additive' or 'multiplicative'"
+        )
+    self.global_local_combination = global_local_combination
 
     # num_poly/num_sins/num_exp = -1 means using default values
     if num_poly == -1:
@@ -313,15 +319,21 @@ class Koopman(nn.Module):
     inp_embed_preds = []
     forw = embedding[:, :1]
     for i in range(inps.shape[1] - 1):
-      if self.add_global_operator:
-        forw = self.global_linear_transform(forw)
-      # TODO Note that local_transform is constant over this loop over the lookback
-      # window, and also constant over the forward prediction loop below.
-      # The local Koopman operator is multiplicatively applied after the global Koopman
-      # operator, according to the paper it should be additive.
-      # einsum indices: b: batch; n: ?; l, h: dimension of the Koopman operator and the 
-      # vector of observations.
-      forw = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+      if self.global_local_combination == "multiplicative":
+        if self.add_global_operator:
+          forw = self.global_linear_transform(forw)
+        # TODO Note that local_transform is constant over this loop over the lookback
+        # window, and also constant over the forward prediction loop below.
+        # einsum indices: b: batch; n: ?; l, h: dimension of the Koopman operator and the 
+        # vector of observations.
+        forw = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+      elif self.global_local_combination == "additive":
+        forw_local = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+        if self.add_global_operator:
+          forw_global = self.global_linear_transform(forw)
+          forw = forw_local + forw_global
+        else:
+          forw = forw_local
       inp_embed_preds.append(forw)
     embed_preds = torch.cat(inp_embed_preds, dim=1)
 
@@ -346,13 +358,25 @@ class Koopman(nn.Module):
 
     # Forward predictions
     for i in range(forward_iters):
-      if self.add_global_operator:
-        forw = self.global_linear_transform(forw)
-      if self.add_control:
-        forw = torch.einsum("bnl, blh -> bnh", forw,
-                            local_transform + linear_adj)
-      else:
-        forw = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+      if self.global_local_combination == "multiplicative":
+        if self.add_global_operator:
+          forw = self.global_linear_transform(forw)
+        if self.add_control:
+          forw = torch.einsum("bnl, blh -> bnh", forw,
+                              local_transform + linear_adj)
+        else:
+          forw = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+      elif self.global_local_combination == "additive":
+        if self.add_control:
+          forw_local = torch.einsum("bnl, blh -> bnh", forw,
+                              local_transform + linear_adj)
+        else:
+          forw_local = torch.einsum("bnl, blh -> bnh", forw, local_transform)
+        if self.add_global_operator:
+          forw_global = self.global_linear_transform(forw)
+          forw = forw_local + forw_global
+        else:
+          forw = forw_local
       forw_preds.append(forw)
     forw_preds = torch.cat(forw_preds, dim=1)
 
