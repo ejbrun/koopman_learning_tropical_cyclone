@@ -77,13 +77,12 @@ class TCTrackDataset(torch.utils.data.Dataset):
         self.data = time_series_list
 
         if mode == "test":
-            # change the input length (<100) will not affect the target output
             self.ts_indices = []
             for i, item in enumerate(self.data):
-                # for i, item in enumerate(self.test_lsts):
-                for j in range(100, len(item) - output_length, output_length):
-                    # for i in range(len(self.data)):
-                    #     for j in range(50, 300 - output_length, 50):
+                # For the test set we effectively set jumps to output_length, such that
+                # every trajectory is independent from each other, so we don't take
+                # all the shifted copies of a trajectory into account.
+                for j in range(0, len(item) - input_length - output_length, output_length):
                     self.ts_indices.append((i, j))
         elif mode == "train" or "valid":
             # shuffle slices before split
@@ -107,14 +106,14 @@ class TCTrackDataset(torch.utils.data.Dataset):
         return len(self.ts_indices)
 
     def __getitem__(self, index):
-        if self.mode == "test":
-            i, j = self.ts_indices[index]
-            x = self.data[i][j - self.input_length : j]
-            y = self.data[i][j : j + self.output_length]
-        else:
-            i, j = self.ts_indices[index]
-            x = self.data[i][j : j + self.input_length]
-            y = self.data[i][
-                j + self.input_length : j + self.input_length + self.output_length
-            ]
+        # if self.mode == "test":
+        #     i, j = self.ts_indices[index]
+        #     x = self.data[i][j - self.input_length : j]
+        #     y = self.data[i][j : j + self.output_length]
+        # else:
+        i, j = self.ts_indices[index]
+        x = self.data[i][j : j + self.input_length]
+        y = self.data[i][
+            j + self.input_length : j + self.input_length + self.output_length
+        ]
         return torch.from_numpy(x).float(), torch.from_numpy(y).float()

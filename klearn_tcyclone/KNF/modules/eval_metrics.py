@@ -119,3 +119,25 @@ def RMSE(
   return np.sqrt(np.mean(mse[:, :fh // 3])), np.sqrt(
       np.mean(mse[:, fh // 3:fh // 3 * 2])), np.sqrt(
           np.mean(mse[:, fh // 3 * 2:])), np.sqrt(np.mean(mse))
+
+
+def RMSE_TCTracks(
+    test_preds,
+    test_tgts
+):
+  """Regular RMSE metric for TCTracks data.
+
+  Args:
+    test_preds: # models' predictions with shape of (number of trajectories,
+    number of samples for traj, forecasting horizons, 2 velocity components)
+    test_tgts: ground truth that has the same shape as test_preds.
+
+  Returns:
+    short, medium, long forecasting horizon prediction Weighted RMSE.
+  """
+  fh = test_preds.shape[1]
+  mse = np.mean((test_preds - test_tgts)**2, axis=0)
+  # return short, medium, long forecasting horizon and total RMSE
+  return np.sqrt(np.mean(mse[:fh // 3])), np.sqrt(
+      np.mean(mse[fh // 3:fh // 3 * 2])), np.sqrt(
+          np.mean(mse[fh // 3 * 2:])), np.sqrt(np.mean(mse))
