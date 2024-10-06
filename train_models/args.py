@@ -9,7 +9,8 @@ _MODEL = flags.DEFINE_string(
 _DATASET = flags.DEFINE_string("dataset", "TCTracks", "dataset classes: TCTracks")
 _YEAR_RANGE = flags.DEFINE_list(
     "year_range",
-    [2000, 2002],
+    [1990, 2021],
+    # [2000, 2021],
     "Year range for the TCTracks data: defaults to [2001, 2002]",
 )
 _GLOBAL_LOCAL_COMBINATION = flags.DEFINE_string(
@@ -22,7 +23,7 @@ _LEARNING_RATE = flags.DEFINE_float(
 )
 _DECAY_RATE = flags.DEFINE_float("decay_rate", 0.9, "The learning decay rate.")
 _BATCH_SIZE = flags.DEFINE_integer("batch_size", 32, "The batch size.")
-_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 3, "The maximum number of epochs.")
+_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 20, "The maximum number of epochs.")
 _MIN_EPOCHS = flags.DEFINE_integer(
     "min_epochs", 10, "The minimum number of epochs the model is trained with."
 )

@@ -16,7 +16,7 @@ from klearn_tcyclone.climada.tc_tracks import TCTracks
 from klearn_tcyclone.data_utils import (
     LinearScaler,
 )
-from klearn_tcyclone.KNF.modules.eval_metrics import RMSE
+from klearn_tcyclone.KNF.modules.eval_metrics import RMSE_TCTracks
 from klearn_tcyclone.KNF.modules.models import Koopman
 from klearn_tcyclone.KNF.modules.train_utils import (
     eval_epoch_koopman,
@@ -66,30 +66,40 @@ def main(argv):
 
     print(flag_params)
 
+    feature_list = ["lat", "lon"]
+    # feature_list = ["lat", "lon", "central_pressure"]
+
     # fixed parameters
     freq = None
-    num_feats = 2
+    num_feats = len(feature_list)
     train_output_length = 15
     input_dim = 3
     input_length = 21
-    hidden_dim = 128
+    
     latent_dim = 32
     num_layers = 4
     control_num_layers = 3
     control_hidden_dim = 64
     transformer_dim = 64
     transformer_num_layers = 3
-    test_output_length = 30
+    test_output_length = train_output_length
     # num_steps can be chosen differently to train_output_length.
     num_steps = 15
-    jumps = 1
+    jumps = 2
+    
+    hidden_dim = 128
+    control_hidden_dim = 64
+    # hidden_dim = num_feats
+    # control_hidden_dim = hidden_dim
+
     encoder_hidden_dim = hidden_dim
     decoder_hidden_dim = hidden_dim
     encoder_num_layers = num_layers
     decoder_num_layers = num_layers
     output_dim = input_dim
     use_revin = True
-    use_instancenorm = True
+    use_instancenorm = False
+    # use_instancenorm = True
     regularize_rank = False
     add_global_operator = True
     add_control = True
@@ -102,11 +112,9 @@ def main(argv):
     print("Device", device)
 
     scaler = LinearScaler()
-    eval_metric = RMSE
+    eval_metric = RMSE_TCTracks
 
     # Datasets
-    # feature_list = ["lat", "lon"]
-    feature_list = ["lat", "lon", "central_pressure"]
     tc_tracks = TCTracks.from_ibtracs_netcdf(
         provider="usa", year_range=year_range, basin="NA", correct_pres=False
     )
@@ -138,7 +146,7 @@ def main(argv):
         tc_tracks=tc_tracks_test,
         feature_list=feature_list,
         mode="test",
-        jumps=jumps,
+        # jumps=jumps, # jumps not used in test mode
         scaler=scaler,
         fit=False,
     )
@@ -152,11 +160,17 @@ def main(argv):
         test_set, batch_size=batch_size, shuffle=False, num_workers=1
     )
 
+    if len(train_loader) == 0:
+        raise Exception(
+            "There are likely too few data points in the test set. Try to increase year_range."
+        )
+
+    # TODO Full model name is too long for torch.save().
     model_name = (
         "Koopman_"
         + str(dataset)
-        + f"_model{model_str}_lgc{global_local_combination}"
-        + "_seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+        + f"_model{model_str}_glc{global_local_combination}"
+        + "_seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}".format(  # noqa: E501, UP032
             seed,
             jumps,
             freq,
@@ -170,32 +184,46 @@ def main(argv):
             input_length,
             train_output_length,
             num_steps,
-            encoder_hidden_dim,
-            decoder_hidden_dim,
-            transformer_dim,
-            control_hidden_dim,
-            encoder_num_layers,
-            decoder_num_layers,
-            transformer_num_layers,
-            control_num_layers,
-            latent_dim,
-            use_revin,
-            use_instancenorm,
-            regularize_rank,
-            add_global_operator,
-            add_control,
         )
+        # + "_seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+        #     seed,
+        #     jumps,
+        #     freq,
+        #     num_poly,
+        #     num_sins,
+        #     num_exp,
+        #     batch_size,
+        #     learning_rate,
+        #     decay_rate,
+        #     input_dim,
+        #     input_length,
+        #     train_output_length,
+        #     num_steps,
+        #     encoder_hidden_dim,
+        #     decoder_hidden_dim,
+        #     transformer_dim,
+        #     control_hidden_dim,
+        #     encoder_num_layers,
+        #     decoder_num_layers,
+        #     transformer_num_layers,
+        #     control_num_layers,
+        #     latent_dim,
+        #     use_revin,
+        #     use_instancenorm,
+        #     regularize_rank,
+        #     add_global_operator,
+        #     add_control,
+        # )
     )
 
     print(model_name)
 
-    cwd_path = os.getcwd()
+    file_dir_path = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(
-        # cwd_path,
-        "/training_results",
+        file_dir_path,
+        "training_results",
         dataset,
     )
-    print(results_dir)
 
     file_name_model = os.path.join(results_dir, model_name + ".pth")
     if os.path.exists(file_name_model):
@@ -205,7 +233,8 @@ def main(argv):
     else:
         last_epoch = 0
         if not os.path.exists(results_dir):
-            os.mkdir(results_dir)
+            # os.mkdir(results_dir)
+            os.makedirs(results_dir, exist_ok=True)
         model = Koopman(
             # number of steps of historical observations encoded at every step
             input_dim=input_dim,
@@ -288,6 +317,7 @@ def main(argv):
         if eval_rmse < best_eval_rmse:
             best_eval_rmse = eval_rmse
             best_model = model
+            # file_name_model2 = "test_path_model.pth"
             torch.save(
                 [best_model, epoch, optimizer.param_groups[0]["lr"]],
                 file_name_model,
@@ -298,6 +328,18 @@ def main(argv):
 
         if np.isnan(train_rmse) or np.isnan(eval_rmse):
             raise ValueError("The model generate NaN values")
+
+        # Save test scores.
+        _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
+        file_name_test_model = os.path.join(results_dir, f"ep{epoch}_test" + model_name + ".pt")
+        torch.save(
+            {
+                "test_preds": test_preds,
+                "test_tgts": test_tgts,
+                "eval_score": eval_metric(test_preds, test_tgts),
+            },
+            file_name_test_model,
+        )
 
         # train the model at least 60 epochs and do early stopping
         if epoch > min_epochs and np.mean(all_eval_rmses[-10:]) > np.mean(
@@ -327,7 +369,6 @@ def main(argv):
     )
 
     
-
     print(model_name)
     print(eval_metric(test_preds, test_tgts))
 
