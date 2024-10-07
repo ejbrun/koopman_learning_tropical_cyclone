@@ -7,7 +7,7 @@ import time
 import numpy as np
 import torch
 from absl import app
-from args import FLAGS
+from klearn_tcyclone.training_utils.args import FLAGS
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils import data
@@ -23,7 +23,7 @@ from klearn_tcyclone.KNF.modules.train_utils import (
     train_epoch_koopman,
 )
 from klearn_tcyclone.knf_data_utils import TCTrackDataset
-from klearn_tcyclone.training_utils import set_flags
+from klearn_tcyclone.training_utils.training_utils import set_flags
 
 
 def main(argv):
@@ -61,53 +61,83 @@ def main(argv):
         decay_rate,
         batch_size,
         num_epochs,
-        min_epochs,
+        min_epochs,  
+        data_dir,
+        regularize_rank,
+        use_revin,
+        use_instancenorm,
+        add_global_operator,
+        add_control,
+        freq,
+        dropout_rate,
+        latent_dim,
+        num_steps,
+        control_hidden_dim,
+        num_layers,
+        control_num_layers,
+        jumps,
+        input_dim,
+        input_length,
+        hidden_dim,
+        train_output_length,
+        test_output_length,
+        num_heads,
+        transformer_dim,
+        transformer_num_layers,
+        num_sins,
+        num_poly,
+        num_exp,
     ) = flag_params.values()
+
 
     print(flag_params)
 
     feature_list = ["lat", "lon"]
     # feature_list = ["lat", "lon", "central_pressure"]
 
-    # fixed parameters
-    freq = None
-    num_feats = len(feature_list)
-    train_output_length = 15
-    input_dim = 3
-    input_length = 21
-    
-    latent_dim = 32
-    num_layers = 4
-    control_num_layers = 3
-    control_hidden_dim = 64
-    transformer_dim = 64
-    transformer_num_layers = 3
-    test_output_length = train_output_length
-    # num_steps can be chosen differently to train_output_length.
-    num_steps = 15
-    jumps = 2
-    
-    hidden_dim = 128
-    control_hidden_dim = 64
-    # hidden_dim = num_feats
-    # control_hidden_dim = hidden_dim
-
+    # these are not contained as flags
     encoder_hidden_dim = hidden_dim
     decoder_hidden_dim = hidden_dim
     encoder_num_layers = num_layers
     decoder_num_layers = num_layers
     output_dim = input_dim
-    use_revin = True
-    use_instancenorm = False
-    # use_instancenorm = True
-    regularize_rank = False
-    add_global_operator = True
-    add_control = True
-    num_sins = -1
-    num_poly = -1
-    num_exp = -1
-    num_heads = 1
-    dropout_rate = 0
+    num_feats = len(feature_list)
+    # ---------------
+
+    # # fixed parameters
+    # freq = None
+    # train_output_length = 15
+    # input_dim = 3
+    # input_length = 21
+    
+    # latent_dim = 32
+    # num_layers = 4
+    # control_num_layers = 3
+    # control_hidden_dim = 64
+    # transformer_dim = 64
+    # transformer_num_layers = 3
+    # test_output_length = train_output_length
+    # # num_steps can be chosen differently to train_output_length.
+    # num_steps = 15
+    # jumps = 2
+    
+    # hidden_dim = 128
+    # control_hidden_dim = 64
+    # # hidden_dim = num_feats
+    # # control_hidden_dim = hidden_dim
+
+    # use_revin = True
+    # use_instancenorm = False
+    # # use_instancenorm = True
+    # regularize_rank = False
+    # add_global_operator = True
+    # add_control = True
+    # num_sins = -1
+    # num_poly = -1
+    # num_exp = -1
+    # num_heads = 1
+    # dropout_rate = 0
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device", device)
 
@@ -263,7 +293,8 @@ def main(argv):
             # hidden dim in the control module
             control_hidden_dim=control_hidden_dim,
             # number of layers in the control module
-            use_revin=use_revin,  # whether to use reversible normalization
+            use_revin=use_revin,
+            # whether to use reversible normalization
             control_num_layers=control_num_layers,
             # whether to use instance normalization on hidden states
             use_instancenorm=use_instancenorm,
