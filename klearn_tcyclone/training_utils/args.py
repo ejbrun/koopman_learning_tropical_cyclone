@@ -25,7 +25,7 @@ _LEARNING_RATE = flags.DEFINE_float(
 )
 _DECAY_RATE = flags.DEFINE_float("decay_rate", 0.9, "The learning decay rate.")
 _BATCH_SIZE = flags.DEFINE_integer("batch_size", 32, "The batch size.")
-_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 2, "The maximum number of epochs.")
+_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 20, "The maximum number of epochs.")
 _MIN_EPOCHS = flags.DEFINE_integer(
     "min_epochs", 10, "The minimum number of epochs the model is trained with."
 )

@@ -27,15 +27,6 @@ from klearn_tcyclone.training_utils.training_utils import set_flags
 
 
 def main(argv):
-    print(FLAGS.seed)
-    print(FLAGS.model)
-    print(FLAGS.dataset)
-    print(FLAGS.global_local_combination)
-    print(FLAGS.learning_rate)
-    print(FLAGS.decay_rate)
-    print(FLAGS.batch_size)
-    print(FLAGS.num_epochs)
-    print(FLAGS.min_epochs)
 
     random.seed(FLAGS.seed)  # python random generator
     np.random.seed(FLAGS.seed)  # numpy random generator
@@ -48,8 +39,6 @@ def main(argv):
 
     # parameters from flag
     flag_params = set_flags(FLAGS=FLAGS)
-
-    print(flag_params)
 
     feature_list = ["lat", "lon"]
     # feature_list = ["lat", "lon", "central_pressure"]
@@ -125,12 +114,18 @@ def main(argv):
         )
 
     # TODO Full model name is too long for torch.save().
-    model_name = (
+    print(flag_params["model"])
+
+    model_folder_path = (
         "Koopman_"
         + str(flag_params["dataset"])
+        + "_model{}_glc{}".format(flag_params["model"], flag_params["global_local_combination"])
+        # + f"_model{flag_params["model"]}" 
+        # + f"_glc{flag_params['global_local_combination']}"
         # + f"_model{flag_params["model"]}_glc{flag_params["global_local_combination"]}"
-        # + f"_model{flag_params["model"]}_glc{flag_params["global_local_combination"]}"
-        + "_seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}".format(  # noqa: E501, UP032
+    )
+    model_name = (
+        "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
             flag_params["seed"],
             flag_params["jumps"],
             flag_params["freq"],
@@ -144,45 +139,29 @@ def main(argv):
             flag_params["input_length"],
             flag_params["train_output_length"],
             flag_params["num_steps"],
+            encoder_hidden_dim,
+            decoder_hidden_dim,
+            flag_params["transformer_dim"],
+            flag_params["control_hidden_dim"],
+            encoder_num_layers,
+            decoder_num_layers,
+            flag_params["transformer_num_layers"],
+            flag_params["control_num_layers"],
+            flag_params["latent_dim"],
+            flag_params["use_revin"],
+            flag_params["use_instancenorm"],
+            flag_params["regularize_rank"],
+            flag_params["add_global_operator"],
+            flag_params["add_control"],
         )
-        # + "_seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
-        #     flag_params["seed"],
-        #     flag_params["jumps"],
-        #     flag_params["freq"],
-        #     flag_params["num_poly"],
-        #     flag_params["num_sins"],
-        #     flag_params["num_exp"],
-        #     flag_params["batch_size"],
-        #     flag_params["learning_rate"],
-        #     flag_params["decay_rate"],
-        #     flag_params["input_dim"],
-        #     flag_params["input_length"],
-        #     flag_params["train_output_length"],
-        #     flag_params["num_steps"],
-        #     flag_params["encoder_hidden_dim"],
-        #     flag_params["decoder_hidden_dim"],
-        #     flag_params["transformer_dim"],
-        #     flag_params["control_hidden_dim"],
-        #     flag_params["encoder_num_layers"],
-        #     flag_params["decoder_num_layers"],
-        #     flag_params["transformer_num_layers"],
-        #     flag_params["control_num_layers"],
-        #     flag_params["latent_dim"],
-        #     flag_params["use_revin"],
-        #     flag_params["use_instancenorm"],
-        #     flag_params["regularize_rank"],
-        #     flag_params["add_global_operator"],
-        #     flag_params["add_control"],
-        # )
     )
-
-    print(model_name)
 
     file_dir_path = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(
         file_dir_path,
         "training_results",
         flag_params["dataset"],
+        model_folder_path,
     )
 
     file_name_model = os.path.join(results_dir, model_name + ".pth")
@@ -192,9 +171,7 @@ def main(argv):
         print("last_epoch:", last_epoch, "learning_rate:", learning_rate)
     else:
         last_epoch = 0
-        if not os.path.exists(results_dir):
-            # os.mkdir(results_dir)
-            os.makedirs(results_dir, exist_ok=True)
+        os.makedirs(results_dir, exist_ok=True)
         model = Koopman(
             # number of steps of historical observations encoded at every step
             input_dim=flag_params["input_dim"],
@@ -338,7 +315,6 @@ def main(argv):
         file_name_test_model,
     )
 
-    print(model_name)
     print(eval_metric(test_preds, test_tgts))
 
 
