@@ -25,7 +25,7 @@ _LEARNING_RATE = flags.DEFINE_float(
 )
 _DECAY_RATE = flags.DEFINE_float("decay_rate", 0.9, "The learning decay rate.")
 _BATCH_SIZE = flags.DEFINE_integer("batch_size", 32, "The batch size.")
-_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 20, "The maximum number of epochs.")
+_NUM_EPOCHS = flags.DEFINE_integer("num_epochs", 2, "The maximum number of epochs.")
 _MIN_EPOCHS = flags.DEFINE_integer(
     "min_epochs", 10, "The minimum number of epochs the model is trained with."
 )
@@ -75,8 +75,9 @@ _CONTROL_NUM_LAYERS = flags.DEFINE_integer(
 _JUMPS = flags.DEFINE_integer(
     "jumps", 5, "The number of skipped steps when genrating sliced samples."
 )
+# Note that input_length must be divisible by input_dim.
 _INPUT_DIM = flags.DEFINE_integer(
-    "input_dim", 5, "The number of observations taken by the encoder at each step"
+    "input_dim", 7, "The number of observations taken by the encoder at each step"
 )
 _INPUT_LENGTH = flags.DEFINE_integer(
     "input_length", 21, "The lookback window length for learning Koopman operator."

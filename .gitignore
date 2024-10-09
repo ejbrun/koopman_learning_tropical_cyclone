@@ -5,3 +5,4 @@
 data/
 .vscode
 .pytest_cache
+train_models/training_results/
