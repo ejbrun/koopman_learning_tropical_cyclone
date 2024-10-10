@@ -13,7 +13,7 @@ dependencies = [
     "ipython",
     "matplotlib",
     "matplotlib-inline",
-    "numpy==1.26.4",
+    "numpy",
     "pandas",
     "scipy",
     "climada",
@@ -21,6 +21,9 @@ dependencies = [
     "dask",
     "cfgrib",
     "ml_confs",
+    "torch",
+    "fiona",
+    "dask[dataframe]",
 ]
 
 [project.optional-dependencies]
