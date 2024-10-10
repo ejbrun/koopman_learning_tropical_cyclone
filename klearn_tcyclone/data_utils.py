@@ -15,7 +15,8 @@ from klearn_tcyclone.climada.tc_tracks import TCTracks
 
 
 def data_array_list_from_TCTracks(
-    tc_tracks: Union[TCTracks, list[Dataset]], feature_list: list[str]
+    tc_tracks: TCTracks | list[Dataset], feature_list: list[str]
+    # tc_tracks: Union[TCTracks, list[Dataset]], feature_list: list[str]
 ) -> list[NDArray]:
     """Create data array list from TCTracks.
 

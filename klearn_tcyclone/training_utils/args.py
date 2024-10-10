@@ -102,6 +102,9 @@ _NUM_SINS = flags.DEFINE_integer("num_sins", -1, "number of sine functions.")
 _NUM_POLY = flags.DEFINE_integer("num_poly", -1, "number of sine functions.")
 _NUM_EXP = flags.DEFINE_integer("num_exp", -1, "number of sine functions.")
 
+_CONTEXT_LENGTH = flags.DEFINE_integer(
+    "context_length", 42, "The context length for Koopman kernels."
+)
 
 ALL_FLAGS = [
     _SEED,
@@ -139,4 +142,43 @@ ALL_FLAGS = [
     _NUM_SINS,
     _NUM_POLY,
     _NUM_EXP,
+    _CONTEXT_LENGTH,
 ]
+
+# KNF_FLAGS = [
+#     _SEED,
+#     _MODEL,
+#     _DATASET,
+#     _YEAR_RANGE,
+#     _GLOBAL_LOCAL_COMBINATION,
+#     _LEARNING_RATE,
+#     _DECAY_RATE,
+#     _BATCH_SIZE,
+#     _NUM_EPOCHS,
+#     _MIN_EPOCHS,
+#     _DATA_DIR,
+#     _REGULARIZE_RANK,
+#     _USE_REVIN,
+#     _USE_INSTANCENORM,
+#     _ADD_GLOBAL_OPERATOR,
+#     _ADD_CONTROL,
+#     _DATA_FREQ,
+#     _DROPOUT_RATE,
+#     _LATENT_DIM,
+#     _NUM_STEPS,
+#     _CONTROL_HIDDEN_DIM,
+#     _NUM_LAYERS,
+#     _CONTROL_NUM_LAYERS,
+#     _JUMPS,
+#     _INPUT_DIM,
+#     _INPUT_LENGTH,
+#     _HIDDEN_DIM,
+#     _TRAIN_OUTPUT_LENGTH,
+#     _TEST_OUTPUT_LENGTH,
+#     _NUM_HEADS,
+#     _TRANSFORMER_DIM,
+#     _TRANSFORMER_NUM_LAYERS,
+#     _NUM_SINS,
+#     _NUM_POLY,
+#     _NUM_EXP,
+# ]

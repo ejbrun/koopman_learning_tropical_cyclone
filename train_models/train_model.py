@@ -151,17 +151,17 @@ def main(argv):
         )
     )
 
-    file_dir_path = os.path.dirname(os.path.abspath(__file__))
+    current_file_dir_path = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(
-        file_dir_path,
+        current_file_dir_path,
         "training_results",
         flag_params["dataset"],
         model_folder_path,
     )
 
-    file_name_model = os.path.join(results_dir, model_name + ".pth")
-    if os.path.exists(file_name_model):
-        model, last_epoch, learning_rate = torch.load(file_name_model)
+    results_file_name = os.path.join(results_dir, model_name + ".pth")
+    if os.path.exists(results_file_name):
+        model, last_epoch, learning_rate = torch.load(results_file_name)
         print("Resume Training")
         print("last_epoch:", last_epoch, "learning_rate:", learning_rate)
     else:
@@ -259,7 +259,7 @@ def main(argv):
             best_model = model
             torch.save(
                 [best_model, epoch, optimizer.param_groups[0]["lr"]],
-                file_name_model,
+                results_file_name,
             )
 
         all_train_rmses.append(train_rmse)
@@ -270,7 +270,7 @@ def main(argv):
 
         # Save test scores.
         _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
-        file_name_test_model = os.path.join(
+        epoch_results_file_name = os.path.join(
             results_dir, f"ep{epoch}_test" + model_name + ".pt"
         )
         torch.save(
@@ -279,7 +279,7 @@ def main(argv):
                 "test_tgts": test_tgts,
                 "eval_score": eval_metric(test_preds, test_tgts),
             },
-            file_name_test_model,
+            epoch_results_file_name,
         )
 
         # train the model at least 60 epochs and do early stopping
@@ -299,14 +299,14 @@ def main(argv):
     print("Evaluate test metric.")
     _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
 
-    file_name_test_model = os.path.join(results_dir, "test_" + model_name + ".pt")
+    test_results_name = os.path.join(results_dir, "test_" + model_name + ".pt")
     torch.save(
         {
             "test_preds": test_preds,
             "test_tgts": test_tgts,
             "eval_score": eval_metric(test_preds, test_tgts),
         },
-        file_name_test_model,
+        test_results_name,
     )
 
     print(eval_metric(test_preds, test_tgts))
