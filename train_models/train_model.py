@@ -40,8 +40,8 @@ def main(argv):
     # parameters from flag
     flag_params = set_flags(FLAGS=FLAGS)
 
-    feature_list = ["lat", "lon"]
-    # feature_list = ["lat", "lon", "central_pressure"]
+    # feature_list = ["lat", "lon"]
+    feature_list = ["lat", "lon", "central_pressure"]
 
     # these are not contained as flags
     encoder_hidden_dim = flag_params["hidden_dim"]
@@ -113,22 +113,17 @@ def main(argv):
             "There are likely too few data points in the test set. Try to increase year_range."
         )
 
-    # TODO Full model name is too long for torch.save().
-    print(flag_params["model"])
 
     model_folder_path = (
         "Koopman_"
         + str(flag_params["dataset"])
         + "_model{}_glc{}".format(flag_params["model"], flag_params["global_local_combination"])
-        # + f"_model{flag_params["model"]}" 
-        # + f"_glc{flag_params['global_local_combination']}"
-        # + f"_model{flag_params["model"]}_glc{flag_params["global_local_combination"]}"
     )
     model_name = (
         "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
             flag_params["seed"],
             flag_params["jumps"],
-            flag_params["freq"],
+            flag_params["data_freq"],
             flag_params["num_poly"],
             flag_params["num_sins"],
             flag_params["num_exp"],
@@ -262,7 +257,6 @@ def main(argv):
         if eval_rmse < best_eval_rmse:
             best_eval_rmse = eval_rmse
             best_model = model
-            # file_name_model2 = "test_path_model.pth"
             torch.save(
                 [best_model, epoch, optimizer.param_groups[0]["lr"]],
                 file_name_model,

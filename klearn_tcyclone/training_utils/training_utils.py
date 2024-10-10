@@ -28,7 +28,7 @@ def set_flags(FLAGS: FlagValues) -> dict:
             "use_instancenorm": FLAGS.use_instancenorm,
             "add_global_operator": FLAGS.add_global_operator,
             "add_control": FLAGS.add_control,
-            "freq": FLAGS.data_freq,
+            "data_freq": FLAGS.data_freq,
             "dropout_rate": FLAGS.dropout_rate,
             "latent_dim": FLAGS.latent_dim,
             "num_steps": FLAGS.num_steps,
