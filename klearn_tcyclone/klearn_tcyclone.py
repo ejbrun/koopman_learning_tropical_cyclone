@@ -1,5 +1,9 @@
+"""Model benchmark class."""
 
 from typing import Union
+
+from numpy import log10, logspace
+
 from klearn_tcyclone.data_utils import (
     context_dataset_from_TCTracks,
     standardize_TensorContextDataset,
@@ -34,6 +38,7 @@ class ModelBenchmark:
     info(additional=""):
         Prints the person's name and age.
     """
+
     def __init__(
         self,
         model,
@@ -51,7 +56,9 @@ class ModelBenchmark:
         self._results = None
 
     @property
-    def results(self)->Union[dict, list[dict]]: #TODO replace Unions by | and update python version
+    def results(
+        self,
+    ) -> Union[dict, list[dict]]:  # TODO replace Unions by | and update python version
         """Benchmark results.
 
         Raises:
@@ -97,23 +104,31 @@ class ModelBenchmark:
     def get_info(self):
         """Prints information about the data."""
         print(
-            " ".join([
-                f"Train contexts have shape {self.tensor_context_train.shape}:",
-                f"{len(self.tensor_context_train)} contexts of length",
-                f"{self.tensor_context_train.context_length} with",
-                f"{self.tensor_context_train.shape[2]} features each.",
-            ])
+            " ".join(
+                [
+                    f"Train contexts have shape {self.tensor_context_train.shape}:",
+                    f"{len(self.tensor_context_train)} contexts of length",
+                    f"{self.tensor_context_train.context_length} with",
+                    f"{self.tensor_context_train.shape[2]} features each.",
+                ]
+            )
         )
         print(
-            " ".join([
-                f"Test contexts have shape {self.tensor_context_test.shape}:",
-                f"{len(self.tensor_context_test)} contexts of length",
-                f"{self.tensor_context_test.context_length} with",
-                f"{self.tensor_context_test.shape[2]} features each.",
-            ])
+            " ".join(
+                [
+                    f"Test contexts have shape {self.tensor_context_test.shape}:",
+                    f"{len(self.tensor_context_test)} contexts of length",
+                    f"{self.tensor_context_test.context_length} with",
+                    f"{self.tensor_context_test.shape[2]} features each.",
+                ]
+            )
         )
 
-    def train_model(self, train_stops: Union[int, list[int]]) -> Union[dict, list[dict]]:
+    def train_model(
+        self,
+        train_stops: Union[int, list[int]] | None = None,
+        num_train_stops: int | None = None,
+    ) -> Union[dict, list[dict]]:
         """Model training.
 
         Args:
@@ -128,6 +143,13 @@ class ModelBenchmark:
             "train": self.tensor_context_train,
             "test": self.tensor_context_test,
         }
+
+        if train_stops is None:
+            training_data_size = tensor_contexts["train"].shape[0]
+            # TODO check what happens if for each stop in training_stops, the model is initialized from scratch
+            train_stops = logspace(
+                2.5, log10(training_data_size), num_train_stops
+            ).astype(int)
 
         if isinstance(train_stops, int):
             print(f"\nModel training: Training points: {train_stops}")
