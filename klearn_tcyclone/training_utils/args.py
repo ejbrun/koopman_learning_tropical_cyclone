@@ -106,6 +106,22 @@ _CONTEXT_LENGTH = flags.DEFINE_integer(
     "context_length", 42, "The context length for Koopman kernels."
 )
 
+_TIKHONOV_REG = flags.DEFINE_float(
+    "tikhonov_reg", 1e-6, "Tikhonov regularization coefficient."
+)
+_KOOPMAN_KERNEL_RANK = flags.DEFINE_integer("koopman_kernel_rank", 25, "The rank of the Koopman kernel.")
+_KOOPMAN_KERNEL_REDUCED_RANK = flags.DEFINE_bool(
+    "koopman_kernel_reduced_rank", True, "Whether to use reduced rank."
+)
+_KOOPMAN_KERNEL_NUM_CENTERS = flags.DEFINE_integer("koopman_kernel_num_centers", 250, "The number of centers of the Koopman kernel.")
+_KOOPMAN_KERNEL_LENGTH_SCALE = flags.DEFINE_float(
+    "koopman_kernel_length_scale", 50.0, "The length scale of the Koopman kernel."
+)
+_KOOPMAN_KERNEL_SVD_SOLVER = flags.DEFINE_string(
+    "koopman_kernel_svd_solver", "randomized", "Which svd solver to use."
+)
+
+
 ALL_FLAGS = [
     _SEED,
     _MODEL,
@@ -143,6 +159,12 @@ ALL_FLAGS = [
     _NUM_POLY,
     _NUM_EXP,
     _CONTEXT_LENGTH,
+    _TIKHONOV_REG,
+    _KOOPMAN_KERNEL_RANK,
+    _KOOPMAN_KERNEL_REDUCED_RANK,
+    _KOOPMAN_KERNEL_NUM_CENTERS,
+    _KOOPMAN_KERNEL_LENGTH_SCALE,
+    _KOOPMAN_KERNEL_SVD_SOLVER,
 ]
 
 # KNF_FLAGS = [
