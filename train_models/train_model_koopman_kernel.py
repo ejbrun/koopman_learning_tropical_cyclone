@@ -131,7 +131,6 @@ def main(argv):
 
     reduced_rank = flag_params["koopman_kernel_reduced_rank"]
     rank = flag_params["koopman_kernel_rank"]
-    num_centers = flag_params["koopman_kernel_num_centers"]
     tikhonov_reg = flag_params["tikhonov_reg"]
 
     # Instantiang the RBF kernel and its length scale as the median of the pairwise distances of the dataset
@@ -144,22 +143,33 @@ def main(argv):
     kernel = RBF(length_scale=length_scale)
 
     if flag_params["model"] == "RRR":
-        svd_solver = "arnoldi"
+        model_params = {
+            "svd_solver": "arnoldi",
+        }
+        # svd_solver = "arnoldi"
         model_class = Kernel
     elif flag_params["model"] == "Randomized_RRR":
-        svd_solver = "randomized"
+        model_params = {
+            "svd_solver": "randomized",
+        }
+        # svd_solver = "randomized"
         model_class = Kernel
     elif flag_params["model"] == "Nystroem_RRR":
-        svd_solver = "arnoldi"
+        model_params = {
+            "svd_solver": "arnoldi",
+            "num_centers": flag_params["koopman_kernel_num_centers"],
+        }
+        # svd_solver = "arnoldi"
         model_class = NystroemKernel
 
     model = model_class(
         kernel=kernel,
         reduced_rank=reduced_rank,
-        svd_solver=svd_solver,
+        # svd_solver=svd_solver,
         tikhonov_reg=flag_params["tikhonov_reg"],
         rank=flag_params["koopman_kernel_rank"],
         rng_seed=flag_params["seed"],
+        **model_params,
     )
 
     num_train_stops = 5
