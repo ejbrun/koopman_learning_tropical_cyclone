@@ -165,6 +165,7 @@ class ModelBenchmark:
         results = []
         for stop in train_stops:
             logger.info(f"\nModel training: Training points: {stop}")
+            print(f"\nModel training: Training points: {stop}")
             results.append(runner(model, tensor_contexts, stop))
 
             RMSE_onestep_train_error = eval_metric(
@@ -189,6 +190,7 @@ class ModelBenchmark:
                 ]
             )
             logger.info(print_str)
+            print(print_str)
 
             if save_model:
                 eval_rmse = RMSE_onestep_test_error
