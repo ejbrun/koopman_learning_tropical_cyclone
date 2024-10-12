@@ -121,6 +121,27 @@ def RMSE(
           np.mean(mse[:, fh // 3 * 2:])), np.sqrt(np.mean(mse))
 
 
+def RMSE_OneStep_TCTracks(
+    test_preds,
+    test_tgts
+):
+  """Regular RMSE metric for TCTracks data.
+
+  Args:
+    test_preds: # models' predictions with shape of (number of trajectories,
+    number of samples for traj, forecasting horizons, 2 velocity components)
+    test_tgts: ground truth that has the same shape as test_preds.
+
+  Returns:
+    short, medium, long forecasting horizon prediction Weighted RMSE.
+  """
+  # TODO used for koopman kernel only atm, 
+  # check shape of test_preds and test_tgts again 
+  # to see how it differs from the use of RMSE_TCTracks for KNF.
+  rmse = np.sqrt(np.mean((test_preds - test_tgts)**2))
+  return rmse
+
+
 def RMSE_TCTracks(
     test_preds,
     test_tgts

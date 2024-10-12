@@ -1,7 +1,10 @@
 """Model benchmark class."""
 
+import logging
 from typing import Union
 
+# import numpy as np
+import torch
 from numpy import log10, logspace
 
 from klearn_tcyclone.data_utils import (
@@ -9,6 +12,8 @@ from klearn_tcyclone.data_utils import (
     standardize_TensorContextDataset,
 )
 from klearn_tcyclone.models_utils import runner
+
+logger = logging.getLogger("ModelBenchmark")
 
 
 class ModelBenchmarkError(Exception):
@@ -41,14 +46,14 @@ class ModelBenchmark:
 
     def __init__(
         self,
-        model,
+        # model,
         features,
         tc_tracks_train,
         tc_tracks_test,
         scaler=None,
         context_length: int = 42,
     ) -> None:
-        self.model = model
+        # self.model = model
         self.features = features
         self.scaler = scaler
         self.context_length = context_length
@@ -126,8 +131,12 @@ class ModelBenchmark:
 
     def train_model(
         self,
+        model,
+        eval_metric,
         train_stops: Union[int, list[int]] | None = None,
         num_train_stops: int | None = None,
+        save_model: bool = False,
+        save_path: str | None = None,
     ) -> Union[dict, list[dict]]:
         """Model training.
 
@@ -138,6 +147,7 @@ class ModelBenchmark:
         Returns:
             Union[dict, list[dict]]: Results of the model training.
         """
+
         self._standardize_data()
         tensor_contexts = {
             "train": self.tensor_context_train,
@@ -151,14 +161,48 @@ class ModelBenchmark:
                 2.5, log10(training_data_size), num_train_stops
             ).astype(int)
 
-        if isinstance(train_stops, int):
-            print(f"\nModel training: Training points: {train_stops}")
-            results = runner(self.model, tensor_contexts, train_stops)
-        else:
-            results = []
-            for stop in train_stops:
-                print(f"\nModel training: Training points: {stop}")
-                results.append(runner(self.model, tensor_contexts, stop))
+        best_eval_rmse = 1e6
+        results = []
+        for stop in train_stops:
+            logger.info(f"\nModel training: Training points: {stop}")
+            results.append(runner(model, tensor_contexts, stop))
+
+            RMSE_onestep_train_error = eval_metric(
+                results[-1]["X_pred_train"], results[-1]["X_true_train"]
+            )
+            RMSE_onestep_test_error = eval_metric(
+                results[-1]["X_pred_test"], results[-1]["X_true_test"]
+            )
+            # RMSE_onestep_train_error = np.sqrt(
+            #     np.mean((results["X_pred_train"] - results["X_true_train"]) ** 2)
+            # )
+            # RMSE_onestep_test_error = np.sqrt(
+            #     np.mean((results["X_pred_test"] - results["X_true_test"]) ** 2)
+            # )
+
+            print_str = " ".join(
+                [
+                    r"Fitting of model took {:.2f}s".format(results[-1]["fit_time"]),
+                    r"with train RMSE of {:.5f} and test RMSE of {:.5f}.".format(
+                        RMSE_onestep_train_error, RMSE_onestep_test_error
+                    ),
+                ]
+            )
+            logger.info(print_str)
+
+            if save_model:
+                eval_rmse = RMSE_onestep_test_error
+                torch.save(
+                    [model, results[-1]["train_stop"], eval_rmse],
+                    save_path + f"_train_steps{stop}" + ".pth",
+                )
+                if eval_rmse < best_eval_rmse:
+                    best_eval_rmse = eval_rmse
+                    best_model = model
+                    torch.save(
+                        [best_model, results[-1]["train_stop"], best_eval_rmse],
+                        save_path + f"_best" + ".pth",
+                    )
 
         self._results = results
         return results

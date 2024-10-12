@@ -34,22 +34,27 @@ def runner(model: Union[Kernel, NystroemKernel], contexts, stop: int) -> dict:
 
     results["train_stop"] = stop
     results["fit_time"] = fit_time
-    results["RMSE_onestep_train_error"] = np.sqrt(
-        np.mean((X_pred_train - X_true_train) ** 2)
-    )
-    results["RMSE_onestep_test_error"] = np.sqrt(
-        np.mean((X_pred_test - X_true_test) ** 2)
-    )
+    results["X_pred_train"] = X_pred_train
+    results["X_true_train"] = X_true_train
+    results["X_pred_test"]= X_pred_test
+    results["X_true_test"]= X_true_test
 
-    print_str = " ".join(
-        [
-            r"Fitting of model took {:.2f}s".format(results["fit_time"]),
-            r"with train RMSE of {:.5f} and test RMSE of {:.5f}.".format(
-                results["RMSE_onestep_train_error"], results["RMSE_onestep_test_error"]
-            ),
-        ]
-    )
-    print(print_str)
+    # results["RMSE_onestep_train_error"] = np.sqrt(
+    #     np.mean((X_pred_train - X_true_train) ** 2)
+    # )
+    # results["RMSE_onestep_test_error"] = np.sqrt(
+    #     np.mean((X_pred_test - X_true_test) ** 2)
+    # )
+
+    # print_str = " ".join(
+    #     [
+    #         r"Fitting of model took {:.2f}s".format(results["fit_time"]),
+    #         r"with train RMSE of {:.5f} and test RMSE of {:.5f}.".format(
+    #             results["RMSE_onestep_train_error"], results["RMSE_onestep_test_error"]
+    #         ),
+    #     ]
+    # )
+    # print(print_str)
 
     return results
 

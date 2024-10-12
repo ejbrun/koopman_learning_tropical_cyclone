@@ -17,7 +17,9 @@ from klearn_tcyclone.data_utils import (
     characteristic_length_scale_from_TCTracks,
 )
 from klearn_tcyclone.klearn_tcyclone import ModelBenchmark
-from klearn_tcyclone.KNF.modules.eval_metrics import RMSE_TCTracks
+from klearn_tcyclone.KNF.modules.eval_metrics import (
+    RMSE_OneStep_TCTracks,
+)
 from klearn_tcyclone.training_utils.args import FLAGS
 from klearn_tcyclone.training_utils.training_utils import set_flags
 
@@ -34,13 +36,20 @@ def main(argv):
     results_dir = os.path.join(
         current_file_dir_path,
         "training_results",
-        flag_params["dataset"],
+        "{}_yrange{}".format(
+            flag_params["dataset"],
+            "".join(map(str,flag_params["year_range"])),
+        ),
         flag_params["model"],
     )
     logs_dir = os.path.join(
         current_file_dir_path,
         "logs",
-        flag_params["dataset"],
+        # flag_params["dataset"],
+        "{}_yrange{}".format(
+            flag_params["dataset"],
+            "".join(map(str,flag_params["year_range"])),
+        ),
     )
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -53,8 +62,7 @@ def main(argv):
         datefmt="%Y-%m-%d %H:%M:%S",
         force=True,
     )
-    logger = logging.getLogger("my logger")
-
+    logger = logging.getLogger(flag_params["model"] + "_logger")
     logger.info(flag_params)
 
     # Set remaining parameters
@@ -66,7 +74,7 @@ def main(argv):
     print("Device", device)
 
     scaler = LinearScaler()
-    eval_metric = RMSE_TCTracks
+    eval_metric = RMSE_OneStep_TCTracks
 
     # Datasets
     tc_tracks = TCTracks.from_ibtracs_netcdf(
@@ -76,29 +84,22 @@ def main(argv):
         correct_pres=False,
     )
 
+    # TODO also generate a validation set
     tc_tracks_train, tc_tracks_test = train_test_split(tc_tracks.data, test_size=0.1)
 
-    model_name = "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(
         flag_params["seed"],
-        flag_params["jumps"],
-        flag_params["data_freq"],
-        flag_params["batch_size"],
-        flag_params["learning_rate"],
-        flag_params["decay_rate"],
-        flag_params["input_dim"],
-        flag_params["input_length"],
-        flag_params["train_output_length"],
-        flag_params["num_steps"],
-        flag_params["latent_dim"],
-        flag_params["use_revin"],
-        flag_params["use_instancenorm"],
-        flag_params["regularize_rank"],
-        flag_params["add_global_operator"],
-        flag_params["add_control"],
+        flag_params["koopman_kernel_length_scale"],
+        flag_params["koopman_kernel_rank"],
+        flag_params["koopman_kernel_reduced_rank"],
+        flag_params["tikhonov_reg"],
+        flag_params["koopman_kernel_num_centers"],
+        flag_params["koopman_kernel_num_train_stops"],
+        flag_params["context_length"],
     )
 
-    results_file_name = os.path.join(results_dir, model_name + ".pth")
-    
+    results_file_name = os.path.join(results_dir, model_name)
+
     # Instantiang the RBF kernel and its length scale as the median of the pairwise distances of the dataset
     length_scale = characteristic_length_scale_from_TCTracks(
         tc_tracks_train, feature_list, quantile=0.2
@@ -109,9 +110,9 @@ def main(argv):
     kernel = RBF(length_scale=length_scale)
     model_params = {
         "kernel": kernel,
+        "rank": flag_params["koopman_kernel_rank"],
         "reduced_rank": flag_params["koopman_kernel_reduced_rank"],
         "tikhonov_reg": flag_params["tikhonov_reg"],
-        "rank": flag_params["koopman_kernel_rank"],
         "rng_seed": flag_params["seed"],
     }
 
@@ -130,7 +131,6 @@ def main(argv):
 
     num_train_stops = flag_params["koopman_kernel_num_train_stops"]
     benchmark = ModelBenchmark(
-        model,
         feature_list,
         tc_tracks_train,
         tc_tracks_test,
@@ -138,7 +138,13 @@ def main(argv):
         context_length=flag_params["context_length"],
     )
     logger.info(benchmark.get_info())
-    benchmark.train_model(num_train_stops=num_train_stops)
+    benchmark.train_model(
+        model=model,
+        eval_metric=eval_metric,
+        num_train_stops=num_train_stops,
+        save_model=True,
+        save_path=results_file_name,
+    )
 
 
 if __name__ == "__main__":

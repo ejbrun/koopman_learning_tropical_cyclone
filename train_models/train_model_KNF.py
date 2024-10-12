@@ -45,7 +45,10 @@ def main(argv):
     results_dir = os.path.join(
         current_file_dir_path,
         "training_results",
-        flag_params["dataset"],
+        "{}_yrange{}".format(
+            flag_params["dataset"],
+            "".join(map(str,flag_params["year_range"])),
+        ),
         flag_params["model"] + "_glc{}".format(
             flag_params["global_local_combination"]
         ),
@@ -53,7 +56,10 @@ def main(argv):
     logs_dir = os.path.join(
         current_file_dir_path,
         "logs",
-        flag_params["dataset"],
+        "{}_yrange{}".format(
+            flag_params["dataset"],
+            "".join(map(str,flag_params["year_range"])),
+        ),
     )
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -66,8 +72,7 @@ def main(argv):
         datefmt="%Y-%m-%d %H:%M:%S",
         force=True,
     )
-    logger = logging.getLogger("my logger")
-
+    logger = logging.getLogger(flag_params["model"] + "_logger")
     logger.info(flag_params)
 
     # Set remaining parameters
@@ -86,7 +91,7 @@ def main(argv):
     # ---------------
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Device", device)
+    logger.info(f"Device {device}")
 
     scaler = LinearScaler()
     eval_metric = RMSE_TCTracks
@@ -145,13 +150,13 @@ def main(argv):
             "There are likely too few data points in the test set. Try to increase year_range."
         )
 
-    model_folder_path = (
-        "Koopman_"
-        + str(flag_params["dataset"])
-        + "_model{}_glc{}".format(
-            flag_params["model"], flag_params["global_local_combination"]
-        )
-    )
+    # model_folder_path = (
+    #     "Koopman_"
+    #     + str(flag_params["dataset"])
+    #     + "_model{}_glc{}".format(
+    #         flag_params["model"], flag_params["global_local_combination"]
+    #     )
+    # )
     model_name = "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
         flag_params["seed"],
         flag_params["jumps"],
@@ -186,11 +191,11 @@ def main(argv):
 
     if os.path.exists(results_file_name):
         model, last_epoch, learning_rate = torch.load(results_file_name)
-        print("Resume Training")
-        print("last_epoch:", last_epoch, "learning_rate:", learning_rate)
+        logger.info("Resume Training")
+        logger.info(f"last_epoch: {last_epoch}, learning_rate: {learning_rate}")
     else:
         last_epoch = 0
-        os.makedirs(results_dir, exist_ok=True)
+        # os.makedirs(results_dir, exist_ok=True)
         model = Koopman(
             # number of steps of historical observations encoded at every step
             input_dim=flag_params["input_dim"],
@@ -244,13 +249,13 @@ def main(argv):
             global_local_combination=flag_params["global_local_combination"],
         ).to(device)
 
-        print("New model")
-    print(
-        "number of params:",
-        sum(p.numel() for p in model.parameters() if p.requires_grad),
+        logger.info("New model")
+    logger.info(
+        f"number of params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}",
+        # sum(p.numel() for p in model.parameters() if p.requires_grad),
     )
 
-    print("define optimizer")
+    logger.info("define optimizer")
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=1, gamma=flag_params["decay_rate"]
@@ -260,7 +265,7 @@ def main(argv):
     all_train_rmses, all_eval_rmses = [], []
     best_eval_rmse = 1e6
 
-    print("start training")
+    logger.info("start training")
     for epoch in range(last_epoch, flag_params["num_epochs"]):
         start_time = time.time()
 
@@ -278,6 +283,7 @@ def main(argv):
             regularize_rank=flag_params["regularize_rank"],
         )
 
+        print("eval comparison", eval_rmse, best_eval_rmse)
         if eval_rmse < best_eval_rmse:
             best_eval_rmse = eval_rmse
             best_model = model
@@ -314,13 +320,13 @@ def main(argv):
 
         epoch_time = time.time() - start_time
         scheduler.step()
-        print(
+        logger.info(
             "Epoch {} | T: {:0.2f} | Train RMSE: {:0.3f} | Valid RMSE: {:0.3f}".format(  # noqa: UP032
                 epoch + 1, epoch_time / 60, train_rmse, eval_rmse
             )
         )
 
-    print("Evaluate test metric.")
+    logger.info("Evaluate test metric.")
     _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
 
     test_results_name = os.path.join(results_dir, "test_" + model_name + ".pt")
@@ -333,7 +339,7 @@ def main(argv):
         test_results_name,
     )
 
-    print(eval_metric(test_preds, test_tgts))
+    logger.info(f"eval_metric: {eval_metric(test_preds, test_tgts)}")
 
 
 if __name__ == "__main__":
