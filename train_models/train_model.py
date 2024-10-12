@@ -1,5 +1,6 @@
 """Training of models."""
 
+import logging
 import os
 import random
 import time
@@ -27,7 +28,6 @@ from klearn_tcyclone.training_utils.training_utils import set_flags
 
 
 def main(argv):
-
     random.seed(FLAGS.seed)  # python random generator
     np.random.seed(FLAGS.seed)  # numpy random generator
 
@@ -40,8 +40,40 @@ def main(argv):
     # parameters from flag
     flag_params = set_flags(FLAGS=FLAGS)
 
+    # Logging and define save paths
+    current_file_dir_path = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(
+        current_file_dir_path,
+        "training_results",
+        flag_params["dataset"],
+        flag_params["model"] + "_glc{}".format(
+            flag_params["global_local_combination"]
+        ),
+    )
+    logs_dir = os.path.join(
+        current_file_dir_path,
+        "logs",
+        flag_params["dataset"],
+    )
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(logs_dir, exist_ok=True)
+    logging.basicConfig(
+        filename=os.path.join(logs_dir, flag_params["model"] + ".log"),
+        encoding="utf-8",
+        filemode="a",
+        format="{asctime} - {name} - {filename}:{lineno} - {levelname} - {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
+    )
+    logger = logging.getLogger("my logger")
+
+    logger.info(flag_params)
+
+    # Set remaining parameters
     # feature_list = ["lat", "lon"]
-    feature_list = ["lat", "lon", "central_pressure"]
+    feature_list = ["lat", "lon", "max_sustained_wind"]
+    # feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
 
     # these are not contained as flags
     encoder_hidden_dim = flag_params["hidden_dim"]
@@ -113,53 +145,45 @@ def main(argv):
             "There are likely too few data points in the test set. Try to increase year_range."
         )
 
-
     model_folder_path = (
         "Koopman_"
         + str(flag_params["dataset"])
-        + "_model{}_glc{}".format(flag_params["model"], flag_params["global_local_combination"])
-    )
-    model_name = (
-        "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
-            flag_params["seed"],
-            flag_params["jumps"],
-            flag_params["data_freq"],
-            flag_params["num_poly"],
-            flag_params["num_sins"],
-            flag_params["num_exp"],
-            flag_params["batch_size"],
-            flag_params["learning_rate"],
-            flag_params["decay_rate"],
-            flag_params["input_dim"],
-            flag_params["input_length"],
-            flag_params["train_output_length"],
-            flag_params["num_steps"],
-            encoder_hidden_dim,
-            decoder_hidden_dim,
-            flag_params["transformer_dim"],
-            flag_params["control_hidden_dim"],
-            encoder_num_layers,
-            decoder_num_layers,
-            flag_params["transformer_num_layers"],
-            flag_params["control_num_layers"],
-            flag_params["latent_dim"],
-            flag_params["use_revin"],
-            flag_params["use_instancenorm"],
-            flag_params["regularize_rank"],
-            flag_params["add_global_operator"],
-            flag_params["add_control"],
+        + "_model{}_glc{}".format(
+            flag_params["model"], flag_params["global_local_combination"]
         )
     )
-
-    current_file_dir_path = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(
-        current_file_dir_path,
-        "training_results",
-        flag_params["dataset"],
-        model_folder_path,
+    model_name = "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+        flag_params["seed"],
+        flag_params["jumps"],
+        flag_params["data_freq"],
+        flag_params["num_poly"],
+        flag_params["num_sins"],
+        flag_params["num_exp"],
+        flag_params["batch_size"],
+        flag_params["learning_rate"],
+        flag_params["decay_rate"],
+        flag_params["input_dim"],
+        flag_params["input_length"],
+        flag_params["train_output_length"],
+        flag_params["num_steps"],
+        encoder_hidden_dim,
+        decoder_hidden_dim,
+        flag_params["transformer_dim"],
+        flag_params["control_hidden_dim"],
+        encoder_num_layers,
+        decoder_num_layers,
+        flag_params["transformer_num_layers"],
+        flag_params["control_num_layers"],
+        flag_params["latent_dim"],
+        flag_params["use_revin"],
+        flag_params["use_instancenorm"],
+        flag_params["regularize_rank"],
+        flag_params["add_global_operator"],
+        flag_params["add_control"],
     )
 
     results_file_name = os.path.join(results_dir, model_name + ".pth")
+
     if os.path.exists(results_file_name):
         model, last_epoch, learning_rate = torch.load(results_file_name)
         print("Resume Training")

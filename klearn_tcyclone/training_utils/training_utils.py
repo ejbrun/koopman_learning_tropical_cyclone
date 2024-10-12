@@ -54,6 +54,7 @@ def set_flags(FLAGS: FlagValues) -> dict:
         "koopman_kernel_num_centers": FLAGS.koopman_kernel_num_centers,
         "koopman_kernel_length_scale": FLAGS.koopman_kernel_length_scale,
         "koopman_kernel_svd_solver": FLAGS.koopman_kernel_svd_solver,
+        "koopman_kernel_num_train_stops": FLAGS.koopman_kernel_num_train_stops,
     }
 
     # else:

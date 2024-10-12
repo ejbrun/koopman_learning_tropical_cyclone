@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "koopman_learning_tropical_cyclone"
 version = "0.0.1"
 description = "Here we explore the possibilities to employ the Koopman operator framework to model, simulate and predict the movement of tropical cyclones."
-requires-python = ">=3.9.13"
+requires-python = ">=3.9.13,<=3.11.9"
 authors = [{name = "Eric Brunner", email = "nephts@mailbox.org"}]
 dependencies = [
     "ipykernel",
