@@ -47,18 +47,16 @@ def main(argv):
         "training_results",
         "{}_yrange{}".format(
             flag_params["dataset"],
-            "".join(map(str,flag_params["year_range"])),
+            "".join(map(str, flag_params["year_range"])),
         ),
-        flag_params["model"] + "_glc{}".format(
-            flag_params["global_local_combination"]
-        ),
+        flag_params["model"] + "_glc{}".format(flag_params["global_local_combination"]),
     )
     logs_dir = os.path.join(
         current_file_dir_path,
         "logs",
         "{}_yrange{}".format(
             flag_params["dataset"],
-            "".join(map(str,flag_params["year_range"])),
+            "".join(map(str, flag_params["year_range"])),
         ),
     )
     os.makedirs(results_dir, exist_ok=True)
@@ -187,10 +185,10 @@ def main(argv):
         flag_params["add_control"],
     )
 
-    results_file_name = os.path.join(results_dir, model_name + ".pth")
+    results_file_name = os.path.join(results_dir, model_name)
 
-    if os.path.exists(results_file_name):
-        model, last_epoch, learning_rate = torch.load(results_file_name)
+    if os.path.exists(results_file_name + ".pth"):
+        model, last_epoch, learning_rate = torch.load(results_file_name + ".pth")
         logger.info("Resume Training")
         logger.info(f"last_epoch: {last_epoch}, learning_rate: {learning_rate}")
     else:
@@ -284,12 +282,17 @@ def main(argv):
         )
 
         print("eval comparison", eval_rmse, best_eval_rmse)
+        torch.save(
+            [model, epoch, optimizer.param_groups[0]["lr"]],
+            results_file_name + f"_epoch{epoch}" + ".pth",
+        )
+
         if eval_rmse < best_eval_rmse:
             best_eval_rmse = eval_rmse
             best_model = model
             torch.save(
                 [best_model, epoch, optimizer.param_groups[0]["lr"]],
-                results_file_name,
+                results_file_name + "_best.pth",
             )
 
         all_train_rmses.append(train_rmse)
@@ -300,16 +303,13 @@ def main(argv):
 
         # Save test scores.
         _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
-        epoch_results_file_name = os.path.join(
-            results_dir, f"ep{epoch}_test" + model_name + ".pt"
-        )
         torch.save(
             {
                 "test_preds": test_preds,
                 "test_tgts": test_tgts,
                 "eval_score": eval_metric(test_preds, test_tgts),
             },
-            epoch_results_file_name,
+            os.path.join(results_dir, f"ep{epoch}_test" + model_name + ".pt"),
         )
 
         # train the model at least 60 epochs and do early stopping
@@ -328,17 +328,14 @@ def main(argv):
 
     logger.info("Evaluate test metric.")
     _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
-
-    test_results_name = os.path.join(results_dir, "test_" + model_name + ".pt")
     torch.save(
         {
             "test_preds": test_preds,
             "test_tgts": test_tgts,
             "eval_score": eval_metric(test_preds, test_tgts),
         },
-        test_results_name,
+        os.path.join(results_dir, "test_" + model_name + ".pt"),
     )
-
     logger.info(f"eval_metric: {eval_metric(test_preds, test_tgts)}")
 
 

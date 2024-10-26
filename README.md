@@ -9,15 +9,18 @@ assess the economical impact and risk associated with future cyclone events.
 The Koopman operator allows to capture complex, nonlinear dyanmics via a infinite-dimensional linear operator.
 Finite dimensional approximations of the Koopman operator can be used for example spectral analysis of nonlinear
 systems and forecasting of nonlinear dynamics.
-
 For this study, the [CLIMADA](https://github.com/CLIMADA-project/climada_python) python package serves as a starting point. It
 provides tropical cylone track data, and has build-in functionalities for risk assessment and economic exposure analysis.
+
 In this context, I aim to test two different Koopman-based approaches. The first ansatz follows a kernel-based approach for
 approximating Koopman operators in reproducing kernel Hilberg spaces (see [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) python package).
 Secondly, I want to investigate the recent [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) architecture.
 This architecture is build from a local and a global Koopman operator (implemented as trainable deep neural networks (multi-layer perceptron and
 transformers)), both capturing local respectively global behaviour of the time series. This is combined with a feedback loop,
 that is designed to capture and correct for spontaneous, sudden shifts and distortions in the temporal distribution.
+
+For the Koopman Neural Forecaster, I plan to test several potential improvement directions. For example the selection of observable functions seems sub-optimal. There is some redundancy in the observable functions and there are only very few non-linear functions (discussed in more detail below), which are crucial for learning non-linear dynamics. Apart from reducing redundancy and increasing the non-linearity content of the observable functions, I aim to replace the (slow) attention mechanism with random feature kernels as described in [Rethinking Attention with Performers](https://arxiv.org/abs/2009.14794).
+
 
 
 ## Setup

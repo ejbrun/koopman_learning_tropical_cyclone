@@ -129,7 +129,6 @@ def main(argv):
 
     model = model_class(**model_params)
 
-    num_train_stops = flag_params["koopman_kernel_num_train_stops"]
     benchmark = ModelBenchmark(
         feature_list,
         tc_tracks_train,
@@ -141,7 +140,7 @@ def main(argv):
     benchmark.train_model(
         model=model,
         eval_metric=eval_metric,
-        num_train_stops=num_train_stops,
+        num_train_stops=flag_params["koopman_kernel_num_train_stops"],
         save_model=True,
         save_path=results_file_name,
     )
