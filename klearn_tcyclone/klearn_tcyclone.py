@@ -147,7 +147,6 @@ class ModelBenchmark:
         Returns:
             Union[dict, list[dict]]: Results of the model training.
         """
-
         self._standardize_data()
         tensor_contexts = {
             "train": self.tensor_context_train,
@@ -184,7 +183,7 @@ class ModelBenchmark:
             print_str = " ".join(
                 [
                     r"Fitting of model took {:.2f}s".format(results[-1]["fit_time"]),
-                    r"with train RMSE of {:.5f} and test RMSE of {:.5f}.".format(
+                    r"with train RMSE of {:.5f} and test RMSE of {:.5f}.".format(  # noqa: UP032
                         RMSE_onestep_train_error, RMSE_onestep_test_error
                     ),
                 ]

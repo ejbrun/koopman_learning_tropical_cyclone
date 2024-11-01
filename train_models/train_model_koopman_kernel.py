@@ -85,6 +85,7 @@ def main(argv):
     )
 
     # TODO also generate a validation set
+    # TODO include random_state = seed in train_test_split
     tc_tracks_train, tc_tracks_test = train_test_split(tc_tracks.data, test_size=0.1)
 
     model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(
