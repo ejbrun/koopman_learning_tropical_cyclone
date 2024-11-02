@@ -195,6 +195,7 @@ class ModelBenchmark:
                 eval_rmse = RMSE_onestep_test_error
                 save_results = {
                     "model": model,
+                    "scaler": self.scaler,
                     "eval_rmse": eval_rmse,
                     "train_stop": results[-1]["train_stop"],
                     "fit_time": results[-1]["fit_time"],
