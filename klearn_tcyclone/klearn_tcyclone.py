@@ -190,19 +190,27 @@ class ModelBenchmark:
             )
             logger.info(print_str)
             print(print_str)
-
+            
             if save_model:
                 eval_rmse = RMSE_onestep_test_error
+                save_results = {
+                    "model": model,
+                    "eval_rmse": eval_rmse,
+                    "train_stop": results[-1]["train_stop"],
+                    "fit_time": results[-1]["fit_time"],
+                }
                 torch.save(
-                    [model, results[-1]["train_stop"], eval_rmse],
+                    save_results,
+                    # [model, results[-1]["train_stop"], eval_rmse],
                     save_path + f"_train_steps{stop}" + ".pth",
                 )
                 if eval_rmse < best_eval_rmse:
                     best_eval_rmse = eval_rmse
-                    best_model = model
+                    # best_model = model
                     torch.save(
-                        [best_model, results[-1]["train_stop"], best_eval_rmse],
-                        save_path + f"_best" + ".pth",
+                        save_results,
+                        # [best_model, results[-1]["train_stop"], best_eval_rmse],
+                        save_path + "_best" + ".pth",
                     )
 
         self._results = results

@@ -38,7 +38,7 @@ def main(argv):
         "training_results",
         "{}_yrange{}".format(
             flag_params["dataset"],
-            "".join(map(str,flag_params["year_range"])),
+            "".join(map(str, flag_params["year_range"])),
         ),
         flag_params["model"],
     )
@@ -48,7 +48,7 @@ def main(argv):
         # flag_params["dataset"],
         "{}_yrange{}".format(
             flag_params["dataset"],
-            "".join(map(str,flag_params["year_range"])),
+            "".join(map(str, flag_params["year_range"])),
         ),
     )
     os.makedirs(results_dir, exist_ok=True)
@@ -85,8 +85,9 @@ def main(argv):
     )
 
     # TODO also generate a validation set
-    # TODO include random_state = seed in train_test_split
-    tc_tracks_train, tc_tracks_test = train_test_split(tc_tracks.data, test_size=0.1)
+    tc_tracks_train, tc_tracks_test = train_test_split(
+        tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
+    )
 
     model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(
         flag_params["seed"],
@@ -101,7 +102,8 @@ def main(argv):
 
     results_file_name = os.path.join(results_dir, model_name)
 
-    # Instantiang the RBF kernel and its length scale as the median of the pairwise distances of the dataset
+    # Instantiang the RBF kernel and its length scale as the
+    # median of the pairwise distances of the dataset.
     length_scale = characteristic_length_scale_from_TCTracks(
         tc_tracks_train, feature_list, quantile=0.2
     )
@@ -138,7 +140,7 @@ def main(argv):
         context_length=flag_params["context_length"],
     )
     logger.info(benchmark.get_info())
-    benchmark.train_model(
+    _ = benchmark.train_model(
         model=model,
         eval_metric=eval_metric,
         num_train_stops=flag_params["koopman_kernel_num_train_stops"],
