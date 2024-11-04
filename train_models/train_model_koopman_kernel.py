@@ -104,9 +104,9 @@ def main(argv):
 
     # Instantiang the RBF kernel and its length scale as the
     # median of the pairwise distances of the dataset.
-    length_scale = characteristic_length_scale_from_TCTracks(
-        tc_tracks_train, feature_list, quantile=0.2
-    )
+    # length_scale = characteristic_length_scale_from_TCTracks(
+    #     tc_tracks_train, feature_list, quantile=0.2
+    # )
     length_scale = flag_params["koopman_kernel_length_scale"]
     print("Length scale:", length_scale)
 
