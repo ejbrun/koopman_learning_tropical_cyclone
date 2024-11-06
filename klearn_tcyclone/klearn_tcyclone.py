@@ -133,12 +133,12 @@ class ModelBenchmark:
         self,
         model,
         eval_metric,
-        train_stops: Union[int, list[int]] | None = None,
+        train_stops: int | list[int] | None = None,
         num_train_stops: int | None = None,
-        save_model: bool = False,
+        save_model: str | bool = False,
         save_results: bool = False,
         save_path: str | None = None,
-    ) -> Union[dict, list[dict]]:
+    ) -> dict | list[dict]:
         """Model training.
 
         Args:
@@ -148,6 +148,9 @@ class ModelBenchmark:
         Returns:
             Union[dict, list[dict]]: Results of the model training.
         """
+        if save_model == "all":
+            save_model = True
+
         self._standardize_data()
         tensor_contexts = {
             "train": self.tensor_context_train,
@@ -174,12 +177,6 @@ class ModelBenchmark:
             RMSE_onestep_test_error = eval_metric(
                 results[-1]["X_pred_test"], results[-1]["X_true_test"]
             )
-            # RMSE_onestep_train_error = np.sqrt(
-            #     np.mean((results["X_pred_train"] - results["X_true_train"]) ** 2)
-            # )
-            # RMSE_onestep_test_error = np.sqrt(
-            #     np.mean((results["X_pred_test"] - results["X_true_test"]) ** 2)
-            # )
 
             print_str = " ".join(
                 [
@@ -204,10 +201,10 @@ class ModelBenchmark:
                     save_results,
                     save_path + f"_train_steps{stop}" + "_results.pth",
                 )
-            if save_model:
+            if save_model is True:
                 eval_rmse = RMSE_onestep_test_error
                 torch.save(
-                    model,
+                    {"model": model, "scaler": self.scaler},
                     save_path + f"_train_steps{stop}" + "_model.pth",
                 )
             if eval_rmse < best_eval_rmse:
@@ -217,9 +214,9 @@ class ModelBenchmark:
                         save_results,
                         save_path + "_best" + "_results.pth",
                     )
-                if save_model:
+                if save_model == "best" or save_model is True:
                     torch.save(
-                        model,
+                        {"model": model, "scaler": self.scaler},
                         save_path + "_best" + "_model.pth",
                     )
 
