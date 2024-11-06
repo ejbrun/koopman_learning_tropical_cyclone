@@ -25,6 +25,7 @@ dependencies = [
     "fiona",
     "dask[dataframe]",
     "absl-py",
+    "py7zr",
 ]
 
 [project.optional-dependencies]

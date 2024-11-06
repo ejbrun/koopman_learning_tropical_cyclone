@@ -136,6 +136,7 @@ class ModelBenchmark:
         train_stops: Union[int, list[int]] | None = None,
         num_train_stops: int | None = None,
         save_model: bool = False,
+        save_results: bool = False,
         save_path: str | None = None,
     ) -> Union[dict, list[dict]]:
         """Model training.
@@ -191,10 +192,9 @@ class ModelBenchmark:
             logger.info(print_str)
             print(print_str)
             
-            if save_model:
+            if save_results:
                 eval_rmse = RMSE_onestep_test_error
                 save_results = {
-                    "model": model,
                     "scaler": self.scaler,
                     "eval_rmse": eval_rmse,
                     "train_stop": results[-1]["train_stop"],
@@ -202,16 +202,25 @@ class ModelBenchmark:
                 }
                 torch.save(
                     save_results,
-                    # [model, results[-1]["train_stop"], eval_rmse],
-                    save_path + f"_train_steps{stop}" + ".pth",
+                    save_path + f"_train_steps{stop}" + "_results.pth",
                 )
-                if eval_rmse < best_eval_rmse:
-                    best_eval_rmse = eval_rmse
-                    # best_model = model
+            if save_model:
+                eval_rmse = RMSE_onestep_test_error
+                torch.save(
+                    model,
+                    save_path + f"_train_steps{stop}" + "_model.pth",
+                )
+            if eval_rmse < best_eval_rmse:
+                best_eval_rmse = eval_rmse
+                if save_results:
                     torch.save(
                         save_results,
-                        # [best_model, results[-1]["train_stop"], best_eval_rmse],
-                        save_path + "_best" + ".pth",
+                        save_path + "_best" + "_results.pth",
+                    )
+                if save_model:
+                    torch.save(
+                        model,
+                        save_path + "_best" + "_model.pth",
                     )
 
         self._results = results
