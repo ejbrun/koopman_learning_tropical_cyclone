@@ -76,7 +76,8 @@ def context_dataset_from_TCTracks(
     )
     context_data_array = np.empty((0, context_length, len(feature_list)))
     for idx, data_array in enumerate(data_array_list):
-        if data_array.shape[0] >= context_length:
+        if data_array.shape[0] > context_length * time_lag:
+        # if data_array.shape[0] >= context_length:
             context_data_array = np.concatenate(
                 [
                     context_data_array,
