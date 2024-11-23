@@ -66,9 +66,9 @@ def main(argv):
     logger.info(flag_params)
 
     # Set remaining parameters
-    # feature_list = ["lat", "lon"]
-    feature_list = ["lat", "lon", "max_sustained_wind"]
-    # feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
+    # feature_list = ["lon", "lat"]
+    feature_list = ["lon", "lat", "max_sustained_wind"]
+    # feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device", device)

@@ -22,7 +22,7 @@ def test_data_array_list_from_TCTracks():
         provider="usa", year_range=(2000, 2001), basin="EP", correct_pres=False
     )
     n_tracks = len(tc_tracks.data)
-    feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
+    feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
     n_features = len(feature_list)
 
     data_array_list = data_array_list_from_TCTracks(
@@ -43,7 +43,7 @@ def test_context_dataset_from_TCTracks(context_length):
     tc_tracks: TCTracks = TCTracks.from_ibtracs_netcdf(
         provider="usa", year_range=(2000, 2001), basin="EP", correct_pres=False
     )
-    feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
+    feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
 
     data_array_list = data_array_list_from_TCTracks(
         tc_tracks=tc_tracks, feature_list=feature_list

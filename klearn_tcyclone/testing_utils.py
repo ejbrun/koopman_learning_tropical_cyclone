@@ -29,8 +29,8 @@ def provide_TensorContextData():
         provider="usa", year_range=(2000, 2000), basin="EP", correct_pres=False
     )
     context_length = 42
-    feature_list = ["lat", "lon"]
-    # feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
+    feature_list = ["lon", "lat"]
+    # feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
     tensor_context = context_dataset_from_TCTracks(
         tc_tracks.data, feature_list=feature_list, context_length=context_length
     )

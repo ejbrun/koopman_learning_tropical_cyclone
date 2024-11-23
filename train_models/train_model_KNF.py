@@ -74,9 +74,9 @@ def main(argv):
     logger.info(flag_params)
 
     # Set remaining parameters
-    # feature_list = ["lat", "lon"]
-    feature_list = ["lat", "lon", "max_sustained_wind"]
-    # feature_list = ["lat", "lon", "max_sustained_wind", "central_pressure"]
+    # feature_list = ["lon", "lat"]
+    feature_list = ["lon", "lat", "max_sustained_wind"]
+    # feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
 
     # these are not contained as flags
     encoder_hidden_dim = flag_params["hidden_dim"]

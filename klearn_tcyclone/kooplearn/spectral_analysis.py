@@ -29,7 +29,7 @@ def get_top_k_ev_below_zero(vec: NDArray, k: int) -> NDArray:
 #     tc_tracks_test,
 #     context_length,
 #     time_lag,
-#     feature_list=["lat", "lon", "max_sustained_wind"],
+#     feature_list=["lon", "lat", "max_sustained_wind"],
 #     top_k: int = 4,
 # ):
 #     tensor_context_train = context_dataset_from_TCTracks(
@@ -107,7 +107,7 @@ def train_model(
     top_k: int = 5,
 ):
     if feature_list is None:
-        feature_list = ["lat", "lon", "max_sustained_wind"]
+        feature_list = ["lon", "lat", "max_sustained_wind"]
 
     tensor_context_train = context_dataset_from_TCTracks(
         tc_tracks_train,
@@ -191,7 +191,7 @@ def train_model(
 #     time_lags: list[int],
 #     context_length: int = 2,
 #     model_config: dict | None = None,
-#     feature_list: list[str] = ["lat", "lon", "max_sustained_wind"],
+#     feature_list: list[str] = ["lon", "lat", "max_sustained_wind"],
 # ):
 #     # # Load TCTracks and resample on equal time step.
 #     # tc_tracks = TCTracks.from_ibtracs_netcdf(provider='official', year_range=(2000, 2021), basin=basin)
@@ -235,7 +235,7 @@ def time_lag_scaling(
     feature_list: list[str] | None = None,
 ) -> tuple[dict, dict, dict]:
     if feature_list is None:
-        feature_list = ["lat", "lon", "max_sustained_wind"]
+        feature_list = ["lon", "lat", "max_sustained_wind"]
 
     tc_tracks_train, tc_tracks_test = train_test_split(tc_tracks.data, test_size=0.1)
 
@@ -276,7 +276,7 @@ def slide_by_scaling(
     feature_list: list[str] | None = None,
 ) -> tuple[dict, dict, dict]:
     if feature_list is None:
-        feature_list = ["lat", "lon", "max_sustained_wind"]
+        feature_list = ["lon", "lat", "max_sustained_wind"]
 
     tc_tracks_train, tc_tracks_test = train_test_split(tc_tracks.data, test_size=0.1)
 

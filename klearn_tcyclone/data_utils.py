@@ -114,7 +114,7 @@ def TCTracks_from_TensorContextDataset(
     )
     assert (
         is_admissible
-    ), "'lat', 'lon' and 'max_sustained_wind' must be in feature_list."
+    ), "'lon', 'lat' and 'max_sustained_wind' must be in feature_list."
 
     for t_context in tensor_context:
         time_data = np.linspace(0, 1, len_time_series)
