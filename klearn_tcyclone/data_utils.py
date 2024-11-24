@@ -15,7 +15,8 @@ from klearn_tcyclone.climada.tc_tracks import TCTracks
 
 
 def data_array_list_from_TCTracks(
-    tc_tracks: TCTracks | list[Dataset], feature_list: list[str]
+    tc_tracks: TCTracks | list[Dataset],
+    feature_list: list[str],
     # tc_tracks: Union[TCTracks, list[Dataset]], feature_list: list[str]
 ) -> list[NDArray]:
     """Create data array list from TCTracks.
@@ -77,7 +78,7 @@ def context_dataset_from_TCTracks(
     context_data_array = np.empty((0, context_length, len(feature_list)))
     for idx, data_array in enumerate(data_array_list):
         if data_array.shape[0] > context_length * time_lag:
-        # if data_array.shape[0] >= context_length:
+            # if data_array.shape[0] >= context_length:
             context_data_array = np.concatenate(
                 [
                     context_data_array,
@@ -307,6 +308,8 @@ def standardize_TensorContextDataset(
     tensor_context: TensorContextDataset,
     scaler: Union[StandardScaler, MinMaxScaler, LinearScaler],
     fit: bool = True,
+    periodic_shift: bool = False,
+    basin: str | None = None,
     backend: str = "auto",
     **backend_kw,
 ) -> TensorContextDataset:
@@ -337,6 +340,11 @@ def standardize_TensorContextDataset(
     Returns:
         TensorContextDataset: _description_
     """
+    if periodic_shift:
+        if basin is None:
+            raise Exception("If periodic_shift is True, basin must be specified.")
+        tensor_context = periodic_shift_TensorContextDataset(tensor_context, basin=basin)
+
     if fit:
         data_transformed = scaler.fit_transform(
             tensor_context.data.reshape(
@@ -411,3 +419,67 @@ def standardize_time_series_list(
         rescaled_concatenated_time_series, length_list
     )
     return rescaled_time_series_list
+
+
+def periodic_identification(
+    data: NDArray, limit_min: float, limit_max: float
+) -> NDArray:
+    def _p_id(x, limit_min, limit_max):
+        dist = limit_max - limit_min
+        if x >= limit_max:
+            x = x - dist
+        if x < limit_min:
+            x = x + dist
+        return x
+
+    _p_id_vec = np.vectorize(_p_id, excluded=["limit_min", "limit_max"])
+    return _p_id_vec(data, limit_min, limit_max)
+
+
+def periodic_shift(
+    data: NDArray,
+    shift: float,
+    dim: int,
+    limits: tuple[float, float],
+) -> NDArray:
+    if not len(data.shape) == 3:
+        raise Exception("Data must be 3-dimensional array.")
+    
+    data_c = data.copy()
+    data_c[:, :, dim] = data_c[:, :, dim] + shift
+    data_c[:, :, dim] = periodic_identification(
+        data_c[:, :, dim], limit_min=limits[0], limit_max=limits[1]
+    )
+    return data_c
+
+
+def periodic_shift_TensorContextDataset(
+    tensor_context_dataset: TensorContextDataset,
+    shift: float | None = None,
+    dim: int | None = None,
+    limits: tuple[float, float] | None = None,
+    basin: str | None = None,
+    backend: str = "auto",
+    **backend_kw,
+) -> TensorContextDataset:
+    if basin is not None:
+        if basin == "EP":
+            shift = 180
+            dim = 0
+            limits = (-180, 180)
+        else:
+            raise Exception("Other basins are not yet implemented.")
+    else:
+        if shift is None:
+            raise Exception("If basin is not specified, shifts needs to be specified.")
+        if dim is None:
+            dim = 0
+        if limits is None:
+            limits = (-180, 180)
+    data = tensor_context_dataset.data
+    data_shifted = periodic_shift(data, shift, dim, limits)
+    tensor_context_dataset_shifted = TensorContextDataset(
+        data_shifted, backend, **backend_kw
+    )
+
+    return tensor_context_dataset_shifted

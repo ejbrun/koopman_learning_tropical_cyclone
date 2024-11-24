@@ -2,15 +2,18 @@
 
 import numpy as np
 import pytest
-from klearn_tcyclone.climada.tc_tracks import TCTracks
+from kooplearn.data import TensorContextDataset
 from numpy.testing import assert_allclose
 
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 from klearn_tcyclone.data_utils import (
     LinearScaler,
     concatenate_time_series_list,
     context_dataset_from_TCTracks,
     data_array_list_from_TCTracks,
     linear_transform,
+    periodic_shift,
+    periodic_shift_TensorContextDataset,
     standardize_time_series_list,
     time_series_list_from_concatenated_time_series,
 )
@@ -133,3 +136,71 @@ def test_standardize_time_series_list():
         for idx in range(len(time_series_list))
     ]
     assert np.all(is_equal_shape)
+
+
+def test_periodic_shift_0():
+    """Test for periodic_shift."""
+    data = np.random.uniform(-1, 1, (120, 12, 4))
+    data_shifted = periodic_shift(data, shift=0.5, dim=0, limits=(-1, 1))
+    data_backshifted = periodic_shift(data_shifted, shift=-0.5, dim=0, limits=(-1, 1))
+    dist = np.linalg.norm(data - data_backshifted)
+    assert dist < 1e-12
+
+
+def test_periodic_shift_1():
+    """Test for periodic_shift."""
+    x_space = np.linspace(-1, 1, 11)
+    data = np.array(
+        [
+            [
+                x_space,
+                x_space,
+            ],
+            [
+                x_space,
+                1 + x_space,
+            ],
+        ]
+    ).transpose((0, 2, 1))
+    data_shifted = periodic_shift(data, shift=1, dim=0, limits=(-1, 1))
+    data_true = np.array(
+        [
+            [
+                np.concatenate([np.linspace(0, 0.8, 5), np.linspace(-1, 0, 6)]),
+                x_space,
+            ],
+            [
+                np.concatenate([np.linspace(0, 0.8, 5), np.linspace(-1, 0, 6)]),
+                1 + x_space,
+            ],
+        ]
+    ).transpose((0, 2, 1))
+    dist = np.linalg.norm(data_true - data_shifted)
+    assert dist < 1e-12
+
+
+def test_periodic_shift_TensorContextDataset_0():
+    """Test for periodic_shift_TensorContextDataset."""
+    data = np.random.uniform(-1, 1, (120, 12, 4))
+    tcd = TensorContextDataset(data)
+    tcd_shifted = periodic_shift_TensorContextDataset(
+        tcd, shift=1.0, dim=0, limits=(-1, 1)
+    )
+    data_shifted = periodic_shift(data, shift=1.0, dim=0, limits=(-1, 1))
+    data_tcd_shifted = tcd_shifted.data
+    dist = np.linalg.norm(data_shifted - data_tcd_shifted)
+    assert dist < 1e-12
+
+
+def test_periodic_shift_TensorContextDataset_1():
+    """Test for periodic_shift_TensorContextDataset."""
+    data = np.random.uniform(-1, 1, (120, 12, 4))
+    tcd = TensorContextDataset(data)
+    tcd_shifted = periodic_shift_TensorContextDataset(
+        tcd, shift=1.0, dim=0, limits=(-1, 1)
+    )
+    tcd_backshifed = periodic_shift_TensorContextDataset(
+        tcd_shifted, shift=-1.0, dim=0, limits=(-1, 1)
+    )
+    dist = np.linalg.norm(tcd.data - tcd_backshifed.data)
+    assert dist < 1e-12
