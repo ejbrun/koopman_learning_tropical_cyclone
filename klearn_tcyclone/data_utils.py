@@ -50,7 +50,7 @@ def context_dataset_from_TCTracks(
     context_length: int = 2,
     time_lag: int = 1,
     backend: str = "auto",
-    verbose: int = 0,
+    verbose: int = 1,
     **backend_kw,
 ) -> TensorContextDataset:
     """Generate context dataset from TCTRacks.
@@ -78,7 +78,6 @@ def context_dataset_from_TCTracks(
     context_data_array = np.empty((0, context_length, len(feature_list)))
     for idx, data_array in enumerate(data_array_list):
         if data_array.shape[0] > context_length * time_lag:
-            # if data_array.shape[0] >= context_length:
             context_data_array = np.concatenate(
                 [
                     context_data_array,
@@ -92,7 +91,7 @@ def context_dataset_from_TCTracks(
             if verbose > 0:
                 print(
                     f"""Data entry {idx} has been removed since it is shorter than the 
-                    context_length."""
+                    context_length {context_length} times time_lag {time_lag}."""
                 )
 
     tensor_context_dataset = TensorContextDataset(

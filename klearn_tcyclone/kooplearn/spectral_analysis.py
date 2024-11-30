@@ -67,16 +67,20 @@ def train_model(
         "test": tensor_context_test,
     }
     scaler = LinearScaler()
-    tensor_context_train_transformed = standardize_TensorContextDataset(
-        tensor_context_train,
-        scaler,
-        fit=True,
-    )
-    tensor_context_test_transformed = standardize_TensorContextDataset(
-        tensor_context_test,
-        scaler,
-        fit=False,
-    )
+    if tensor_context_train.data.shape[0] == 0:
+        print(f"Train tensor context is empty, for time_lag={time_lag}, slide_by={slide_by} and context_length={context_length}.")
+        return None, None, np.array(top_k * [None])
+    else:
+        tensor_context_train_transformed = standardize_TensorContextDataset(
+            tensor_context_train,
+            scaler,
+            fit=True,
+        )
+        tensor_context_test_transformed = standardize_TensorContextDataset(
+            tensor_context_test,
+            scaler,
+            fit=False,
+        )
 
     contexts = {
         "train": tensor_context_train_transformed,
