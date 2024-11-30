@@ -12,6 +12,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xarray import Dataset
 
 from klearn_tcyclone.climada.tc_tracks import TCTracks
+from klearn_tcyclone.climada.tc_tracks_tools import BASIN_SHIFT_SWITCHER
 
 
 def data_array_list_from_TCTracks(
@@ -305,7 +306,7 @@ class LinearScaler:
 
 def standardize_TensorContextDataset(
     tensor_context: TensorContextDataset,
-    scaler: Union[StandardScaler, MinMaxScaler, LinearScaler],
+    scaler: StandardScaler | MinMaxScaler | LinearScaler,
     fit: bool = True,
     periodic_shift: bool = False,
     basin: str | None = None,
@@ -342,7 +343,9 @@ def standardize_TensorContextDataset(
     if periodic_shift:
         if basin is None:
             raise Exception("If periodic_shift is True, basin must be specified.")
-        tensor_context = periodic_shift_TensorContextDataset(tensor_context, basin=basin)
+        tensor_context = periodic_shift_TensorContextDataset(
+            tensor_context, basin=basin, **backend_kw
+        )
 
     if fit:
         data_transformed = scaler.fit_transform(
@@ -443,7 +446,10 @@ def periodic_shift(
 ) -> NDArray:
     if not len(data.shape) == 3:
         raise Exception("Data must be 3-dimensional array.")
-    
+
+    if shift == 0:
+        return data
+
     data_c = data.copy()
     data_c[:, :, dim] = data_c[:, :, dim] + shift
     data_c[:, :, dim] = periodic_identification(
@@ -459,15 +465,17 @@ def periodic_shift_TensorContextDataset(
     limits: tuple[float, float] | None = None,
     basin: str | None = None,
     backend: str = "auto",
+    verbose: str = False,
     **backend_kw,
 ) -> TensorContextDataset:
     if basin is not None:
-        if basin == "EP":
-            shift = 180
-            dim = 0
-            limits = (-180, 180)
-        else:
-            raise Exception("Other basins are not yet implemented.")
+        if basin not in BASIN_SHIFT_SWITCHER.keys():
+            raise Exception("Not a valid value for basin.")
+        shift = BASIN_SHIFT_SWITCHER[basin]
+        dim = 0
+        limits = (-180, 180)
+        if verbose:
+            print(basin, shift)
     else:
         if shift is None:
             raise Exception("If basin is not specified, shifts needs to be specified.")

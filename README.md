@@ -81,13 +81,16 @@ nonlinear observables, i.e. interactions (-> improve performance). So far the in
 
 
 ### Contributions
+
+#### Model improvements
 - Implementation of additive combination of global and local Koopman operator:
     - although the authors described this additive combination in the paper, they implemented multiplicative combination in the code
     - additive combination seems much more natural from a perspective based on Koopman operator theory
     - in first tests, additive combination performs better than the multiplicative option
--  Data translation and organisation functions (mapping CLIMADA TCTracks data to pytorch data structure among others)
-- Data translation between CLIMADA TCTracks data and kooplearn data structure
-- Assess data quality and extract characteristic lenght scale (used for kooplearn kernel methods) from data
-- Data standardization for kooplearn and pytorch data structures
 - Comparison between Koopman kernel regression and deep neural network transformer architecture
+
+#### Data processing
+- Conversion of CLIMADA TCTracks into kooplearn and pytorch compatible data structures
+- Data quality and extract characteristic length scale from data (needed for kooplearn kernal models)
+- Data standardization and periodic centering of earth scale tropical cyclone data (discontinuous cut along the longitudinal coordinate for $\mathrm{lon} = +- 180^\circ$)
 

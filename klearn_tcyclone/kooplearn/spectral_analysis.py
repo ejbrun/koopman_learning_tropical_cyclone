@@ -40,12 +40,14 @@ def get_top_k_ev_and_indices_below_zero(evals: NDArray, k: int) -> NDArray:
 def train_model(
     tc_tracks_train,
     tc_tracks_test,
+    basin: str,
     context_length: int,
     time_lag: int,
     slide_by: int,
     model_config: dict | None = None,
     feature_list: list[str] | None = None,
     top_k: int = 5,
+    **backend_kw,
 ):
     if feature_list is None:
         feature_list = ["lon", "lat", "max_sustained_wind"]
@@ -68,18 +70,26 @@ def train_model(
     }
     scaler = LinearScaler()
     if tensor_context_train.data.shape[0] == 0:
-        print(f"Train tensor context is empty, for time_lag={time_lag}, slide_by={slide_by} and context_length={context_length}.")
+        print(
+            f"Train tensor context is empty, for time_lag={time_lag}, slide_by={slide_by} and context_length={context_length}."
+        )
         return None, None, np.array(top_k * [None])
     else:
         tensor_context_train_transformed = standardize_TensorContextDataset(
             tensor_context_train,
             scaler,
             fit=True,
+            periodic_shift=True,
+            basin=basin,
+            **backend_kw,
         )
         tensor_context_test_transformed = standardize_TensorContextDataset(
             tensor_context_test,
             scaler,
             fit=False,
+            periodic_shift=True,
+            basin=basin,
+            **backend_kw,
         )
 
     contexts = {
@@ -134,6 +144,7 @@ def train_model(
 
 def time_lag_scaling(
     tc_tracks,
+    basin: str,
     time_lags: list[int],
     context_length: int = 2,
     top_k: int = 5,
@@ -155,7 +166,8 @@ def time_lag_scaling(
         evals, error, tscale = train_model(
             tc_tracks_train,
             tc_tracks_test,
-            context_length,
+            basin=basin,
+            context_length=context_length,
             time_lag=time_lag,
             slide_by=1,
             model_config=model_config,
@@ -175,6 +187,7 @@ def time_lag_scaling(
 
 def slide_by_scaling(
     tc_tracks,
+    basin: str,
     slide_bys: list[int],
     context_length: int = 2,
     top_k: int = 5,
@@ -196,7 +209,8 @@ def slide_by_scaling(
         evals, error, tscale = train_model(
             tc_tracks_train,
             tc_tracks_test,
-            context_length,
+            basin=basin,
+            context_length=context_length,
             time_lag=1,
             slide_by=slide_by,
             model_config=model_config,
