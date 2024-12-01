@@ -133,8 +133,6 @@ def train_model(
     evals = nys_rrr.eig()
     _, evals_k = get_top_k_ev_and_indices_below_zero(evals, k=top_k)
     # evals_k = get_top_k_ev_below_zero(evals, k=top_k)
-    # evals_k = evals[topk(np.abs(evals.real), top_k).indices]
-    # evals_k = evals[topk(np.abs(evals), top_k).indices]
 
     tscales = -1 / np.log(evals_k.real.clip(1e-8, 1))
     tscales_real = tscales * time_lag * slide_by
@@ -162,7 +160,6 @@ def time_lag_scaling(
     tscale_d = {}
     for time_lag in time_lags:
         print(f"Train with time_lag {time_lag}.")
-        # try:
         evals, error, tscale = train_model(
             tc_tracks_train,
             tc_tracks_test,
@@ -174,10 +171,6 @@ def time_lag_scaling(
             feature_list=feature_list,
             top_k=top_k,
         )
-        # except:
-        #     evals = (None, None)
-        #     error, tscale = None, np.array(top_k * [None])
-        #     print("Not enough time points in some trajectories for given time_lag.")
         error_d[time_lag] = error
         tscale_d[time_lag] = tscale
         evals_d[time_lag] = evals
