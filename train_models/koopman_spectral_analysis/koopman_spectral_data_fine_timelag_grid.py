@@ -10,6 +10,8 @@ from klearn_tcyclone.kooplearn.spectral_analysis import (
     time_lag_scaling,
 )
 
+
+
 # time_step_h = 0.5
 time_step_h = 1.0
 time_step_scaling = int(3 / time_step_h)
@@ -18,16 +20,7 @@ basins = ["EP", "NA", "SI", "SP", "WP"]
 # basins = BASINS[:-1]
 year_range = (1980, 2021)
 tc_tracks_dict = get_TCTrack_dict(basins, time_step_h, year_range)
-model_config = {
-    "length_scale": 10.0,
-    "reduced_rank": False,
-    "rank": 50,
-    "num_centers": 1600,
-    # "num_centers": 800,
-    "tikhonov_reg": 1e-4,
-    "svd_solver": "arnoldi",
-    "rng_seed": 42,
-}
+
 context_lengths = [4, 8]
 top_k = 20
 feature_list = [
@@ -56,41 +49,61 @@ save_path = os.path.join(
 )
 os.makedirs(save_path, exist_ok=True)
 
-for context_length in context_lengths:
-    print("Spectral analysis for context length:", context_length)
-    file_name = "_".join(
-        [
-            f"cl{context_length}",
-            f"tsteph{time_step_h}"
-            f"nc{model_config['num_centers']}",
-            f"tkreg{model_config['tikhonov_reg']}",
-        ]
-    )
+reduced_rank = True
 
-    evals = {}
-    errors = {}
-    time_scales = {}
-    for basin in basins:
-        print("Basin:", basin)
-        ev, e, ts = time_lag_scaling(
-            tc_tracks_dict[basin],
-            basin=basin,
-            time_lags=time_lags,
-            context_length=context_length,
-            top_k=top_k,
-            model_config=model_config,
-            feature_list=feature_list,
+for num_centers in [800, 1600]:
+    model_config = {
+        "length_scale": 10.0,
+        "reduced_rank": reduced_rank,
+        "rank": 50,
+        "num_centers": num_centers,
+        "tikhonov_reg": 1e-4,
+        "svd_solver": "arnoldi",
+        "rng_seed": 42,
+    }
+
+
+    for context_length in context_lengths:
+        print("Spectral analysis for context length:", context_length)
+
+        if model_config["reduced_rank"]:
+            reduced_rank_str = "redrank"
+        else:
+            reduced_rank_str = ""
+        file_name = "_".join(
+            [
+                f"cl{context_length}",
+                f"tsteph{time_step_h}"
+                f"nc{model_config['num_centers']}",
+                f"tkreg{model_config['tikhonov_reg']}",
+                reduced_rank_str,
+            ]
         )
-        evals[basin] = ev
-        errors[basin] = e
-        time_scales[basin] = ts
 
-    print("Save data.")
-    with open(os.path.join(save_path, "evals_" + file_name + ".pickle"), "wb") as file:
-        pickle.dump(evals, file)
-    with open(os.path.join(save_path, "errors_" + file_name + ".pickle"), "wb") as file:
-        pickle.dump(errors, file)
-    with open(
-        os.path.join(save_path, "time_scales_" + file_name + ".pickle"), "wb"
-    ) as file:
-        pickle.dump(time_scales, file)
+        evals = {}
+        errors = {}
+        time_scales = {}
+        for basin in basins:
+            print("Basin:", basin)
+            ev, e, ts = time_lag_scaling(
+                tc_tracks_dict[basin],
+                basin=basin,
+                time_lags=time_lags,
+                context_length=context_length,
+                top_k=top_k,
+                model_config=model_config,
+                feature_list=feature_list,
+            )
+            evals[basin] = ev
+            errors[basin] = e
+            time_scales[basin] = ts
+
+        print("Save data.")
+        with open(os.path.join(save_path, "evals_" + file_name + ".pickle"), "wb") as file:
+            pickle.dump(evals, file)
+        with open(os.path.join(save_path, "errors_" + file_name + ".pickle"), "wb") as file:
+            pickle.dump(errors, file)
+        with open(
+            os.path.join(save_path, "time_scales_" + file_name + ".pickle"), "wb"
+        ) as file:
+            pickle.dump(time_scales, file)
