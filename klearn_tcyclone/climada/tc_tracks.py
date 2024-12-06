@@ -25,6 +25,9 @@ class TCTracks(qTCTracks):
         legend=True,
         adapt_fontsize=True,
         linestyle=None,
+        extent = None,
+        loc_legend=None,
+        ncols_legend = None,
         **kwargs,
     ):
         """Track over earth. Historical events are blue, probabilistic black.
@@ -52,17 +55,22 @@ class TCTracks(qTCTracks):
             kwargs["lw"] = 2
         if "transform" not in kwargs:
             kwargs["transform"] = ccrs.PlateCarree()
+        if loc_legend is None:
+            loc_legend = 0
+        if ncols_legend is None:
+            ncols_legend = 1
 
         if not self.size:
             LOGGER.info("No tracks to plot")
             return None
 
-        extent = self.get_extent(deg_buffer=1)
+        if extent is None:
+            extent = self.get_extent(deg_buffer=1)
         mid_lon = 0.5 * (extent[1] + extent[0])
 
         if not axis:
             proj = ccrs.PlateCarree(central_longitude=mid_lon)
-            _, axis, _ = u_plot.make_map(
+            fig, axis, _ = u_plot.make_map(
                 proj=proj, figsize=figsize, adapt_fontsize=adapt_fontsize
             )
         else:
@@ -111,6 +119,11 @@ class TCTracks(qTCTracks):
                 leg_lines.append(Line2D([0], [0], color="grey", lw=2, ls=":"))
                 leg_names.append("Historical")
                 leg_names.append("Synthetic")
-            axis.legend(leg_lines, leg_names, loc=0)
+            axis.legend(
+                leg_lines,
+                leg_names,
+                loc=loc_legend,
+                ncols=ncols_legend,
+            )
         plt.tight_layout()
         return axis
