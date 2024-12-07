@@ -51,13 +51,27 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ### Tropical cylones
 We use the CLIMADA package to import tropical cyclone dataset and for plotting. There are five main basins of tropical cylones which we consider here: East Pacific (EP), North Atlantic (NA), South Indian Ocean (SI), South Pacific (SP) and West Pacific (WP).
 
+Below we show example tracks of tropical cyclones in the East Pacific (left) and the North Atlantic (right).
 ![Tropical cyclone track](./plots/tropical_cyclone_data/TCTrack_EP_NA.png)
+The color of the track indicate the severity of the cyclone/hurricane, which is classified into seven severity levels from "Tropical Depression" to "Hurrican Category 5", see legend.
+
+In the following we train separate Koopman Kernel models on each of the basins. Based on these models we can predict the future tracks and severity of new tropical cyclones, which can be used for downstream tasks such as risk assessment and economical impact calculations for such events.
+Another aspect is the dynamical characterization of the different basins via a spectral analysis of the corresponding Koopman operators. The Koopman modes characterize the dynamics and can be used to idenfity and discriminate dynamical signatures of the basins.
 
 
-### Spectral analysis and implied time scale:
+
+### Spectral consistency analysis and implied time scale:
 From the spectrum of the Koopman operator one can obtain the time scales of the dynamical modes of the system. An important test for spectral consistency considers the scaling of implied time scales (ITS) as we vary the internal time unit of the dynamics. This can be controlled by adding a `time_lag` between the observation points.
+As we increase the internal time unit of the system, the eigenvalues should become smaller and the associated dyanmics should become faster (i.e. a decrease of the time scale). However, the implied time scale, which is the product of time lag and time scale, should stay relatively constant.
 
 ![Timelag scaling of ITS](./plots/koopman_spectral_analysis/time_lag_scaling/time_lag_scaling_ctlen4.png)
+
+In the left plot we observe that the RMSE monotonically increases with the time lag, but with decreasing slope.
+For large time lags it might eventually converge to a fixed value.
+In the right plot we show the implied time scales from five selected eigenvalues of the Koopman operator.
+We observe a typical behavior, where initially the ITS increases, but for larger time lags the ITS converges to a constant value. This verifies the consistency of our model. As we increase the implicit time unit of our model (controlled by the time lag of the training data) the ITS should stay constant.
+Additionally we observe a strong fluctuation of the largest shown eigenvalue (smallest index), which is very close to the theoretical maximum of one.
+This shows that our eigenvalue computation is unstable close to the steady state (corresponding to the eigenvalue one), which is, however, expected when training the Koopman kernel models on limited real world data. The lower eigenvalues (larger index) show a much more stable behavior.
 
 
 ### Plan:
