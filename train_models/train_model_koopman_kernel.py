@@ -11,10 +11,8 @@ from kooplearn.models import Kernel, NystroemKernel
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split
 
-from klearn_tcyclone.climada.tc_tracks import TCTracks
 from klearn_tcyclone.data_utils import (
     LinearScaler,
-    characteristic_length_scale_from_TCTracks,
 )
 from klearn_tcyclone.klearn_tcyclone import ModelBenchmark
 from klearn_tcyclone.KNF.modules.eval_metrics import (
@@ -25,6 +23,11 @@ from klearn_tcyclone.training_utils.training_utils import set_flags
 
 
 def main(argv):
+    """Main script.
+
+    Args:
+        argv (_type_): Flags.
+    """
     random.seed(FLAGS.seed)  # python random generator
     np.random.seed(FLAGS.seed)  # numpy random generator
 
@@ -36,9 +39,10 @@ def main(argv):
     results_dir = os.path.join(
         current_file_dir_path,
         "training_results",
-        "{}_yrange{}".format(
+        "{}_yrange{}_basin{}".format(
             flag_params["dataset"],
             "".join(map(str, flag_params["year_range"])),
+            flag_params["basin"],
         ),
         flag_params["model"],
     )
@@ -66,9 +70,16 @@ def main(argv):
     logger.info(flag_params)
 
     # Set remaining parameters
-    # feature_list = ["lon", "lat"]
-    feature_list = ["lon", "lat", "max_sustained_wind"]
-    # feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
+    # feature_list = ["lon", "lat", "max_sustained_wind"]
+    feature_list = [
+        "lon",
+        "lat",
+        "max_sustained_wind",
+        "radius_max_wind",
+        "radius_oci",
+        "central_pressure",
+        "environmental_pressure",
+    ]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device", device)
@@ -77,19 +88,25 @@ def main(argv):
     eval_metric = RMSE_OneStep_TCTracks
 
     # Datasets
-    tc_tracks = TCTracks.from_ibtracs_netcdf(
-        provider="usa",
+    from klearn_tcyclone.climada.utils import get_TCTrack_dict
+
+    tc_tracks = get_TCTrack_dict(
+        basins=[flag_params["basin"]],
+        time_step_h=flag_params["time_step_h"],
         year_range=flag_params["year_range"],
-        basin="NA",
-        correct_pres=False,
-    )
+    )[flag_params["basin"]]
+    # tc_tracks = TCTracks.from_ibtracs_netcdf(
+    #     provider="official",
+    #     year_range=flag_params["year_range"],
+    #     basin=flag_params["basin"],
+    # )
 
     # TODO also generate a validation set
     tc_tracks_train, tc_tracks_test = train_test_split(
         tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
     )
 
-    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(
+    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(  # noqa: E501
         flag_params["seed"],
         flag_params["koopman_kernel_length_scale"],
         flag_params["koopman_kernel_rank"],
@@ -136,8 +153,10 @@ def main(argv):
         feature_list,
         tc_tracks_train,
         tc_tracks_test,
+        basin=flag_params["basin"],
         scaler=scaler,
         context_length=flag_params["context_length"],
+        time_lag=flag_params["time_lag"],
     )
     logger.info(benchmark.get_info())
     _ = benchmark.train_model(

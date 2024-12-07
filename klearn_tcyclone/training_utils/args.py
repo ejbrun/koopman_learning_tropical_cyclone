@@ -15,6 +15,10 @@ _YEAR_RANGE = flags.DEFINE_list(
     # [2000, 2021],
     "Year range for the TCTracks data: defaults to [2001, 2002]",
 )
+_BASIN = flags.DEFINE_string("basin", "EP", "Basin of the tropical cyclone data.")
+_TIME_STEP_H = flags.DEFINE_float(
+    "time_step_h", 1.0, "Time step (in hours) of the tropical cyclone data."
+)
 _GLOBAL_LOCAL_COMBINATION = flags.DEFINE_string(
     "global_local_combination",
     "additive",
@@ -101,13 +105,16 @@ _TRANSFORMER_NUM_LAYERS = flags.DEFINE_integer(
 _NUM_SINS = flags.DEFINE_integer("num_sins", -1, "number of sine functions.")
 _NUM_POLY = flags.DEFINE_integer("num_poly", -1, "number of sine functions.")
 _NUM_EXP = flags.DEFINE_integer("num_exp", -1, "number of sine functions.")
-
 _CONTEXT_LENGTH = flags.DEFINE_integer(
-    "context_length", 42, "The context length for Koopman kernels."
+    "context_length", 4, "The context length for Koopman kernels."
 )
-
+_TIME_LAG = flags.DEFINE_integer(
+    "time_lag",
+    1,
+    "The time lag between consecutive data points. Controls the internal time unit of the model.",  # noqa: E501
+)
 _TIKHONOV_REG = flags.DEFINE_float(
-    "tikhonov_reg", 1e-6, "Tikhonov regularization coefficient."
+    "tikhonov_reg", 1e-8, "Tikhonov regularization coefficient."
 )
 _KOOPMAN_KERNEL_RANK = flags.DEFINE_integer(
     "koopman_kernel_rank", 25, "The rank of the Koopman kernel."
@@ -116,7 +123,7 @@ _KOOPMAN_KERNEL_REDUCED_RANK = flags.DEFINE_bool(
     "koopman_kernel_reduced_rank", True, "Whether to use reduced rank."
 )
 _KOOPMAN_KERNEL_NUM_CENTERS = flags.DEFINE_integer(
-    "koopman_kernel_num_centers", 250, "The number of centers of the Koopman kernel."
+    "koopman_kernel_num_centers", 200, "The number of centers of the Koopman kernel."
 )
 _KOOPMAN_KERNEL_LENGTH_SCALE = flags.DEFINE_float(
     "koopman_kernel_length_scale", 50.0, "The length scale of the Koopman kernel."
@@ -134,6 +141,8 @@ ALL_FLAGS = [
     _MODEL,
     _DATASET,
     _YEAR_RANGE,
+    _BASIN,
+    _TIME_STEP_H,
     _GLOBAL_LOCAL_COMBINATION,
     _LEARNING_RATE,
     _DECAY_RATE,
@@ -166,6 +175,7 @@ ALL_FLAGS = [
     _NUM_POLY,
     _NUM_EXP,
     _CONTEXT_LENGTH,
+    _TIME_LAG,
     _TIKHONOV_REG,
     _KOOPMAN_KERNEL_RANK,
     _KOOPMAN_KERNEL_REDUCED_RANK,

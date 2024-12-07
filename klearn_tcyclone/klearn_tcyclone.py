@@ -50,13 +50,20 @@ class ModelBenchmark:
         features,
         tc_tracks_train,
         tc_tracks_test,
+        basin: str,
         scaler=None,
         context_length: int = 42,
+        time_lag: int | None = None,
     ) -> None:
         # self.model = model
         self.features = features
+        self.basin = basin
         self.scaler = scaler
         self.context_length = context_length
+        if time_lag is None:
+            self.time_lag = 1
+        else:
+            self.time_lag = time_lag
         self._set_tensor_contexts(tc_tracks_train, tc_tracks_test)
         self._results = None
 
@@ -84,11 +91,13 @@ class ModelBenchmark:
             tc_tracks_train,
             feature_list=self.features,
             context_length=self.context_length,
+            time_lag=self.time_lag,
         )
         tensor_context_test = context_dataset_from_TCTracks(
             tc_tracks_test,
             feature_list=self.features,
             context_length=self.context_length,
+            time_lag=self.time_lag,
         )
         self.tensor_context_train = tensor_context_train
         self.tensor_context_test = tensor_context_test
@@ -99,11 +108,15 @@ class ModelBenchmark:
                 self.tensor_context_train,
                 self.scaler,
                 fit=True,
+                periodic_shift=True,
+                basin=self.basin,
             )
             self.tensor_context_test = standardize_TensorContextDataset(
                 self.tensor_context_test,
                 self.scaler,
                 fit=False,
+                periodic_shift=True,
+                basin=self.basin,
             )
 
     def get_info(self):
