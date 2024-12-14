@@ -1,13 +1,14 @@
 """Tools for tc_tracks.py."""
 
-BASINS = ["EP", "NA", "NI", "SI", "SP", "WP", "SA"]
+BASINS_ALL = ["EP", "NA", "NI", "SI", "SP", "WP", "SA"]
+BASINS_SELECTION = ["EP", "NA", "SI", "SP", "WP"]
 
 BASIN_SHIFT_SWITCHER = {
-    BASINS[0]: 180,
-    BASINS[1]: 0,
-    BASINS[2]: 0,
-    BASINS[3]: 0,
-    BASINS[4]: 180,
-    BASINS[5]: 180,
-    BASINS[6]: 0,
+    BASINS_ALL[0]: 180,
+    BASINS_ALL[1]: 0,
+    BASINS_ALL[2]: 0,
+    BASINS_ALL[3]: 0,
+    BASINS_ALL[4]: 180,
+    BASINS_ALL[5]: 180,
+    BASINS_ALL[6]: 0,
 }

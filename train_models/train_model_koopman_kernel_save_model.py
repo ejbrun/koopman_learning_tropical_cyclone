@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 from klearn_tcyclone.data_utils import (
     LinearScaler,
 )
+from klearn_tcyclone.climada.utils import get_TCTrack_dict
 from klearn_tcyclone.klearn_tcyclone import ModelBenchmark
 from klearn_tcyclone.KNF.modules.eval_metrics import (
     RMSE_OneStep_TCTracks,
@@ -88,8 +89,6 @@ def main(argv):
     eval_metric = RMSE_OneStep_TCTracks
 
     # Datasets
-    from klearn_tcyclone.climada.utils import get_TCTrack_dict
-
     tc_tracks = get_TCTrack_dict(
         basins=[flag_params["basin"]],
         time_step_h=flag_params["time_step_h"],
@@ -106,7 +105,7 @@ def main(argv):
         tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
     )
 
-    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}".format(  # noqa: E501
+    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}_kktsteph{}".format(  # noqa: E501
         flag_params["seed"],
         flag_params["koopman_kernel_length_scale"],
         flag_params["koopman_kernel_rank"],
@@ -115,6 +114,7 @@ def main(argv):
         flag_params["koopman_kernel_num_centers"],
         flag_params["koopman_kernel_num_train_stops"],
         flag_params["context_length"],
+        flag_params["time_step_h"],
     )
 
     results_file_name = os.path.join(results_dir, model_name)
