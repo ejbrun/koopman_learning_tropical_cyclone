@@ -1,6 +1,8 @@
 """Functions for spectral analysis and consistency analysis."""
 
 import numpy as np
+import pandas as pd
+from itertools import product
 from numpy.typing import NDArray
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split
@@ -219,3 +221,47 @@ def slide_by_scaling(
         evals_d[slide_by] = evals
 
     return evals_d, error_d, tscale_d
+
+
+def get_df_evecs(context_dict, models, basins: list[str], top_k: int) -> pd.DataFrame:
+    evecs_right = {}
+    for basin_data, basin_model in product(basins, repeat=2):
+        evals, evec_right = models[basin_model].eig(
+            eval_right_on=context_dict[basin_data]
+        )
+
+        indices_k, _ = get_top_k_ev_and_indices_below_zero(evals, top_k)
+        evec_right = evec_right[:, indices_k]
+
+        evecs_right[(basin_data, basin_model)] = evec_right
+
+    df_evecs = pd.DataFrame()
+    for basin_data in basins:
+        data_df = pd.concat(
+            [
+                pd.DataFrame(
+                    evecs_right[(basin_data, basin_model)].real,
+                    columns=[
+                        f"evec_re_m{idx}_{i}"
+                        for i in range(evecs_right[(basin_data, basin_model)].shape[1])
+                    ],
+                )
+                for idx, basin_model in enumerate(basins)
+            ]
+            + [
+                pd.DataFrame(
+                    evecs_right[(basin_data, basin_model)].imag,
+                    columns=[
+                        f"evec_im_m{idx}_{i}"
+                        for i in range(evecs_right[(basin_data, basin_model)].shape[1])
+                    ],
+                )
+                for idx, basin_model in enumerate(basins)
+            ],
+            axis=1,
+            ignore_index=False,
+        )
+        data_df["basin_data"] = [basin_data] * data_df.shape[0]
+        df_evecs = pd.concat([df_evecs, data_df], axis=0, ignore_index=True)
+
+    return df_evecs

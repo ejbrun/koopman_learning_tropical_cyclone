@@ -74,6 +74,17 @@ Additionally we observe a strong fluctuation of the largest shown eigenvalue (sm
 This shows that our eigenvalue computation is unstable close to the steady state (corresponding to the eigenvalue one), which is, however, expected when training the Koopman kernel models on limited real world data. The lower eigenvalues (larger index) show a much more stable behavior.
 
 
+### Koopman eigenfunction analysis
+
+We study the dynamical imprint of the tropical cyclone tracks on the eigenfunctions of the Koopman operator. For this we compare the five most important basins EP, NA, SI, SP, WP. For each basin we generate the corresponding Koopman operator, and project the tropical cyclone tracks onto the first 10 eigenfunctions of each Koopman operator. Combining the coordinates for each basin, we obtain a relatively low-dimensional data vector characterized by the dynamical features of each basin.
+
+![Timelag scaling of ITS](./plots/koopman_spectral_analysis/eigenfunction_clustering/year_range_1980_2021_train_dsize70_topk10/umap_clustering_cl32_tsteph1.0_nc600_tkreg1e-08__um_nneigh600_um_md0.2.png)
+
+The plot shows the eigenfunction coordinates, embedded into a two-dimensional feature space for visualization. The embedding is obtain with the nonlinear dimensionality reduction algorithm UMAP. The basins are identifiable as five clusters, partially overlapping. This shows that each basin boasts specific dynamical properties which are revealed by our data-driven analysis. Especially basin WP builds a single cluster well seperated from all the other basins, and thus shows the most unique tropical cyclone dynamics.
+The identified nonlinear features are sufficient to discriminate the basins reasonably well and can be used, e.g., for classification of new tropical cyclone tracks.
+
+
+
 ### Plan:
 
 In this context, I aim to test two different Koopman-based approaches. The first ansatz follows a kernel-based approach for

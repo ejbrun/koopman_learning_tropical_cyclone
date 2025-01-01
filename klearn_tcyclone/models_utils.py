@@ -80,9 +80,10 @@ def predict_context_shift(
 
 
 def predict_time_series(
-    model: Union[Kernel, NystroemKernel],
+    model: Kernel | NystroemKernel,
     initial_context: TensorContextDataset,
     n_steps: int,
+    context_length: int,
 ) -> NDArray:
     """Predict time series based on initial context window.
 
@@ -90,12 +91,13 @@ def predict_time_series(
         model (_type_): _description_
         initial_context (TensorContextDataset): _description_
         n_steps (int): _description_
+        context_length (int): _description_
 
     Returns:
         NDArray: _description_
     """
     time_series_data = []
-    current_context = initial_context
+    current_context = initial_context[:, -context_length:]
     for _ in range(n_steps):
         current_context = predict_context_shift(model, current_context)
         time_series_data.append(current_context.data[:, -1])

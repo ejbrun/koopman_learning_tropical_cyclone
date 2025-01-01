@@ -1,9 +1,13 @@
 """Utils for data processing."""
 
+import glob
+import os
 from collections.abc import Callable
 from typing import Union
 
 import numpy as np
+import pandas as pd
+import torch
 import xarray as xr
 from kooplearn.data import TensorContextDataset, TrajectoryContextDataset
 from numpy.typing import NDArray
@@ -490,3 +494,153 @@ def periodic_shift_TensorContextDataset(
     )
 
     return tensor_context_dataset_shifted
+
+
+def standardized_context_dataset_from_TCTracks(
+    tc_tracks: TCTracks,
+    feature_list: list[str],
+    scaler: StandardScaler | MinMaxScaler | LinearScaler,
+    context_length: int = 2,
+    time_lag: int = 1,
+    fit: bool = True,
+    periodic_shift: bool = True,
+    basin: str | None = None,
+    verbose: int = 1,
+    backend: str = "auto",
+    **backend_kw,
+) -> TensorContextDataset:
+    """Generates standardized TensorContextDataset from TCTracks.
+
+    Args:
+        tc_tracks (TCTracks): _description_
+        feature_list (list[str]): _description_
+        scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
+        context_length (int, optional): _description_. Defaults to 2.
+        time_lag (int, optional): _description_. Defaults to 1.
+        fit (bool, optional): _description_. Defaults to True.
+        periodic_shift (bool, optional): _description_. Defaults to True.
+        basin (str | None, optional): _description_. Defaults to None.
+        verbose (int, optional): _description_. Defaults to 1.
+        backend (str, optional): _description_. Defaults to "auto".
+
+    Returns:
+        TensorContextDataset: _description_
+    """
+    tensor_context = context_dataset_from_TCTracks(
+        tc_tracks,
+        feature_list=feature_list,
+        context_length=context_length,
+        time_lag=time_lag,
+        verbose=verbose,
+        **backend_kw
+    )  
+    standardized_tensor_context = standardize_TensorContextDataset(
+        tensor_context,
+        scaler=scaler,
+        fit=fit,
+        periodic_shift=periodic_shift,
+        basin=basin,
+        backend=backend,
+        **backend_kw,
+    )
+    return standardized_tensor_context
+
+
+def get_parameters_from_files(folder_path: str, keys: list[str]):
+    file_list = glob.glob(os.path.join(folder_path, "*train_steps*.pth"))
+
+    index_identifier = {
+        "train_steps": ("train_steps", "_results.pth"),
+        "koopman_kernel_rank": ("kkrank", "_kkrdrank"),
+        "context_length": ("kkcntlength", "_kktsteph"),
+    }
+
+    param_dict = {}
+    for key in keys:
+        param_dict[key] = []
+    # for key in keys:
+    #     start_pattern, stop_pattern = index_identifier[key]
+    #     param_list = []
+
+    for file_name in file_list:
+        for key in keys:
+            start_pattern, stop_pattern = index_identifier[key]
+            index_start = file_name.find(start_pattern)
+            index_end = file_name.find(stop_pattern)
+            param_dict[key].append(
+                int(file_name[index_start + len(start_pattern) : index_end])
+            )
+
+    df_params = pd.DataFrame()
+    for key in keys:
+        df_params[key] = param_dict[key]
+
+    return df_params
+
+
+def load_model_results(flag_params: dict, path_training_results: str, keys: list[str]):
+    import_dir = os.path.join(
+        path_training_results,
+        "{}_yrange{}_basin{}".format(
+            flag_params["dataset"],
+            "".join(map(str, flag_params["year_range"])),
+            flag_params["basin"],
+        ),
+        flag_params["model"],
+    )
+    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}_kktsteph{}".format(  # noqa: E501
+        flag_params["seed"],
+        flag_params["koopman_kernel_length_scale"],
+        flag_params["koopman_kernel_rank"],
+        flag_params["koopman_kernel_reduced_rank"],
+        flag_params["tikhonov_reg"],
+        flag_params["koopman_kernel_num_centers"],
+        flag_params["koopman_kernel_num_train_stops"],
+        flag_params["context_length"],
+        flag_params["time_step_h"],
+    )
+
+    results_file_name = os.path.join(import_dir, model_name)
+    df = get_parameters_from_files(import_dir, keys)
+    for key in [key for key in keys if key != "train_steps"]:
+        df = df[df[key] == flag_params[key]]
+    train_steps = df.sort_values(by="train_steps")["train_steps"].to_list()
+
+    load_keys = ["scaler", "eval_rmse", "train_stop", "fit_time"]
+    results = {}
+    for step in train_steps:
+        res = torch.load(results_file_name + f"_train_steps{step}_results.pth")
+        results[step] = {}
+        for key in load_keys:
+            results[step][key] = res[key]
+
+    return results
+
+
+def load_model(flag_params: dict, path_training_results: str):
+    import_dir = os.path.join(
+        path_training_results,
+        "{}_yrange{}_basin{}".format(
+            flag_params["dataset"],
+            "".join(map(str, flag_params["year_range"])),
+            flag_params["basin"],
+        ),
+        flag_params["model"],
+    )
+    model_name = "seed{}_kklnscale{}_kkrank{}_kkrdrank{}_kktkreg{}_kkncntr{}_kkntstops{}_kkcntlength{}_kktsteph{}".format(  # noqa: E501
+        flag_params["seed"],
+        flag_params["koopman_kernel_length_scale"],
+        flag_params["koopman_kernel_rank"],
+        flag_params["koopman_kernel_reduced_rank"],
+        flag_params["tikhonov_reg"],
+        flag_params["koopman_kernel_num_centers"],
+        flag_params["koopman_kernel_num_train_stops"],
+        flag_params["context_length"],
+        flag_params["time_step_h"],
+    )
+
+    results_file_name = os.path.join(import_dir, model_name)
+    best_model_dict = torch.load(results_file_name + "_best_model.pth")
+    best_results_dict = torch.load(results_file_name + "_best_results.pth")
+
+    return best_model_dict, best_results_dict
