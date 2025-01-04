@@ -55,7 +55,7 @@ def context_dataset_from_TCTracks(
     context_length: int = 2,
     time_lag: int = 1,
     backend: str = "auto",
-    verbose: int = 1,
+    verbose: int = 0,
     **backend_kw,
 ) -> TensorContextDataset:
     """Generate context dataset from TCTRacks.
@@ -505,7 +505,7 @@ def standardized_context_dataset_from_TCTracks(
     fit: bool = True,
     periodic_shift: bool = True,
     basin: str | None = None,
-    verbose: int = 1,
+    verbose: int = 0,
     backend: str = "auto",
     **backend_kw,
 ) -> TensorContextDataset:
