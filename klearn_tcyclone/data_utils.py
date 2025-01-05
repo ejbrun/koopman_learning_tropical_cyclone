@@ -107,7 +107,7 @@ def context_dataset_from_TCTracks(
 
 def TCTracks_from_TensorContextDataset(
     tensor_context: TensorContextDataset, feature_list: list[str]
-):
+) -> TCTracks:
     new_xarr_list = []
     len_time_series = tensor_context.shape[1]
     n_features = tensor_context.shape[2]

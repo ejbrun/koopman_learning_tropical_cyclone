@@ -202,8 +202,8 @@ class ModelBenchmark:
             logger.info(print_str)
             print(print_str)
             
+            eval_rmse = RMSE_onestep_test_error
             if save_results:
-                eval_rmse = RMSE_onestep_test_error
                 save_results = {
                     "scaler": self.scaler,
                     "eval_rmse": eval_rmse,
@@ -215,7 +215,6 @@ class ModelBenchmark:
                     save_path + f"_train_steps{stop}" + "_results.pth",
                 )
             if save_model is True:
-                eval_rmse = RMSE_onestep_test_error
                 torch.save(
                     {"model": model, "scaler": self.scaler},
                     save_path + f"_train_steps{stop}" + "_model.pth",

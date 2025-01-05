@@ -6,15 +6,19 @@
 # python train_model_koopman_kernel.py --model=Nystroem_RRR --koopman_kernel_num_train_stops=5 --year_range=1990,2010
 
 
-koopman_kernel_length_scale=(10)
+# koopman_kernel_length_scale=(10)
+koopman_kernel_length_scale=(1 5 50 100)
 koopman_kernel_rank=(50 100 150)
 koopman_kernel_num_centers=(800)
 kk_num_train_stops=10
 tikhonov_reg=1e-8
-basins=("EP" "NA" "SI" "SP" "WP")
+basins=("NA")
+# basins=("EP" "NA" "SI" "SP" "WP")
 time_step_h=1.0
-context_lengths=(4 8 16 32 64)
+# context_lengths=(4 8 16 32 64)
+context_lengths=(32)
 koopman_kernel_reduced_rank=False
+
 
 for kk_length_scale in ${koopman_kernel_length_scale[@]};
 do

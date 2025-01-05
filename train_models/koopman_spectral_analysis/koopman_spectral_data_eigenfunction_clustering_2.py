@@ -52,7 +52,7 @@ flag_params = {
     "koopman_kernel_length_scale": 10.0,
     "koopman_kernel_rank": 50,
     "koopman_kernel_num_centers": 800,
-    "context_length": 16,
+    "context_length": 32,
     "koopman_kernel_reduced_rank": False,
     "time_step_h": 1.0,
 }
@@ -90,13 +90,10 @@ for basin in basins:
 # training_data_size = 30
 top_k = 10
 
-# training_data_sizes = [50, 70]
-training_data_sizes = [70]
+training_data_sizes = [50, 70]
 # training_data_sizes = [40, 60]
-# umap_n_neighborss = [600, 1200]
-umap_n_neighborss = [1200]
-# umap_min_dists = [0.1, 0.2]
-umap_min_dists = [0.2]
+umap_n_neighborss = [600, 1200]
+umap_min_dists = [0.1, 0.2]
 
 for training_data_size, umap_n_neighbors, umap_min_dist in product(
     training_data_sizes, umap_n_neighborss, umap_min_dists

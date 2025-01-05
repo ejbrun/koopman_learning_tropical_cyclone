@@ -11,6 +11,7 @@ from kooplearn.models import Kernel, NystroemKernel
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split
 
+from klearn_tcyclone.climada.utils import get_TCTrack_dict
 from klearn_tcyclone.data_utils import (
     LinearScaler,
 )
@@ -88,8 +89,6 @@ def main(argv):
     eval_metric = RMSE_OneStep_TCTracks
 
     # Datasets
-    from klearn_tcyclone.climada.utils import get_TCTrack_dict
-
     tc_tracks = get_TCTrack_dict(
         basins=[flag_params["basin"]],
         time_step_h=flag_params["time_step_h"],
