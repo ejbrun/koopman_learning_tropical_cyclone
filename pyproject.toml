@@ -12,27 +12,23 @@ dependencies = [
     "ipykernel",
     "ipython",
     "matplotlib",
-    "matplotlib-inline",
     "numpy",
     "pandas",
     "scipy",
-    "climada",
     "kooplearn",
-    "dask",
-    "cfgrib",
     "ml_confs",
     "torch",
     "fiona",
     "dask[dataframe]",
     "absl-py",
     "py7zr",
+    "umap-learn",
 ]
 
 [project.optional-dependencies]
 dev = [
     "ruff",
     "pyright",
-    "black",
 ]
 tests = [
   "pytest",

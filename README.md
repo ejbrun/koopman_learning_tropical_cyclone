@@ -16,7 +16,7 @@ provides tropical cylone track data, and has build-in functionalities for risk a
 
 
 ## Setup
-To install the project, first clone the repository and then run from the project folder:
+To install the project, first clone the repository, and then run from the project folder:
 ```
 python -m venv .venv
 ```
@@ -30,7 +30,16 @@ on Mac and Linux, or
 ```
 on Windows.
 
-Then, run
+To install the package, first we have to install the CLIMADA dependency. This is not possible via PyPI, but has to be done directly from github.
+First navigate to the location where you want to clone the CLIMADA github repostitory, then run
+```
+git clone https://github.com/CLIMADA-project/climada_python.git
+```
+With activated venv, navigate to the root of the climada_python repository and run
+```
+pip install -e .
+```
+After this, navigate back to the root of this project and run
 ```
 pip install -e .
 ```
