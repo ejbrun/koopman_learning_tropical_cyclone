@@ -1,6 +1,5 @@
 # Koopman operator learning for Tropical Cylones
 
-[Work in progress]
 
 In this repository I test the applicability of the Koopman operator framework to analyse
 and predict the dynamics of tropical cylones. Based on these prediction models, we can 
@@ -58,19 +57,26 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ## Project description
 
 ### Tropical cylones
-We use the CLIMADA package to import tropical cyclone dataset and for plotting. There are five main basins of tropical cylones which we consider here: East Pacific (EP), North Atlantic (NA), South Indian Ocean (SI), South Pacific (SP) and West Pacific (WP).
+We use the CLIMADA package to import tropical cyclone dataset and for plotting. There are five main basins of tropical cylones, which are mainly considered in this repository:: East Pacific (EP), North Atlantic (NA), South Indian Ocean (SI), South Pacific (SP) and West Pacific (WP).
 
 Below we show example tracks of tropical cyclones in the East Pacific (left) and the North Atlantic (right).
 ![Tropical cyclone track](./plots/tropical_cyclone_data/TCTrack_EP_NA.png)
 The color of the track indicate the severity of the cyclone/hurricane, which is classified into seven severity levels from "Tropical Depression" to "Hurrican Category 5", see legend.
 
-In the following we train separate Koopman Kernel models on each of the basins. Based on these models we can predict the future tracks and severity of new tropical cyclones, which can be used for downstream tasks such as risk assessment and economical impact calculations for such events.
-Another aspect is the dynamical characterization of the different basins via a spectral analysis of the corresponding Koopman operators. The Koopman modes characterize the dynamics and can be used to idenfity and discriminate dynamical signatures of the basins.
+The notebook `examples/koopman_kernel_for_TC.ipynb` introduces the tropical cyclone dataset (imported from CLIMADA) and the main data structure used in this repository. Examples of cyclone trajectories are plotted and different Koopman kernel models (implemented in kooplearn) are compared. Also the necessary preporcessing steps for model training are described in this notebook.
 
 
+### Forecasting cylone trajectories and severity levels
+Based on the trained Koopman kernel models, we can forecast the future trajectories and severity of new tropical cyclones. Such forecasts can be used for further downstream tasks such as risk assessment and economical impact calculations of such events.
+In the plot below, the cyclone forecasting is exemplified via some test cyclone tracks (solid lines are the original trajectory, dotted lines the prediction based on our model).
 
-### Spectral consistency analysis and implied time scale:
-From the spectrum of the Koopman operator one can obtain the time scales of the dynamical modes of the system. An important test for spectral consistency considers the scaling of implied time scales (ITS) as we vary the internal time unit of the dynamics. This can be controlled by adding a `time_lag` between the observation points.
+![Tropical cyclone forecast](./plots/tropical_cyclone_forecast/TC_forecast_basinNA.png)
+
+
+### Spectral consistency analysis and implied time scale
+[see `examples/koopman_kernel_for_TC_spectral_consistency_analysis.ipynb`]
+
+From the spectrum of the Koopman operator one can obtain the time scales of the dynamical modes of the system. An important test for spectral consistency considers the scaling of implied time scales (ITS) as we vary the internal time unit of the dynamics. This can be controlled by the `time_lag` parameter, setting the time step between consecutive observation points.
 As we increase the internal time unit of the system, the eigenvalues should become smaller and the associated dyanmics should become faster (i.e. a decrease of the time scale). However, the implied time scale, which is the product of time lag and time scale, should stay relatively constant.
 
 ![Timelag scaling of ITS](./plots/koopman_spectral_analysis/time_lag_scaling/time_lag_scaling_ctlen4.png)
@@ -84,29 +90,33 @@ This shows that our eigenvalue computation is unstable close to the steady state
 
 
 ### Koopman eigenfunction analysis
+[see `examples/koopman_kernel_for_TC_Koopman_eigenfunctions.ipynb`]
 
+Another aspect is the dynamical characterization of the different basins via a spectral analysis of the corresponding Koopman operators. The Koopman modes characterize the dynamics and can be used to identify and discriminate dynamical signatures of the basins.
 We study the dynamical imprint of the tropical cyclone tracks on the eigenfunctions of the Koopman operator. For this we compare the five most important basins EP, NA, SI, SP, WP. For each basin we generate the corresponding Koopman operator, and project the tropical cyclone tracks onto the first 10 eigenfunctions of each Koopman operator. Combining the coordinates for each basin, we obtain a relatively low-dimensional data vector characterized by the dynamical features of each basin.
 
-![Timelag scaling of ITS](./plots/koopman_spectral_analysis/eigenfunction_clustering/year_range_1980_2021_train_dsize70_topk10/umap_clustering_cl32_tsteph1.0_nc600_tkreg1e-08__um_nneigh600_um_md0.2.png)
+![Koopman eigenfunction analysis](./plots/koopman_spectral_analysis/eigenfunction_clustering/year_range_1980_2021_train_dsize70_topk10/umap_clustering_cl32_tsteph1.0_nc600_tkreg1e-08__um_nneigh600_um_md0.2.png)
 
 The plot shows the eigenfunction coordinates, embedded into a two-dimensional feature space for visualization. The embedding is obtain with the nonlinear dimensionality reduction algorithm UMAP. The basins are identifiable as five clusters, partially overlapping. This shows that each basin boasts specific dynamical properties which are revealed by our data-driven analysis. Especially basin WP builds a single cluster well seperated from all the other basins, and thus shows the most unique tropical cyclone dynamics.
 The identified nonlinear features are sufficient to discriminate the basins reasonably well and can be used, e.g., for classification of new tropical cyclone tracks.
 
 
 
-### Plan:
+## Future Plan:
 
-In this context, I aim to test two different Koopman-based approaches. The first ansatz follows a kernel-based approach for
+### Comparing kooplearn to the Koopman Neural Forecaster
+The kooplearn package implements a kernel-based approach for
 approximating Koopman operators in reproducing kernel Hilberg spaces (see [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) python package).
-Secondly, I want to investigate the recent [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) architecture.
+I want to compare this approach to a transformer-based deep neurel network architecture [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF).
 This architecture is build from a local and a global Koopman operator (implemented as trainable deep neural networks (multi-layer perceptron and
 transformers)), both capturing local respectively global behaviour of the time series. This is combined with a feedback loop,
 that is designed to capture and correct for spontaneous, sudden shifts and distortions in the temporal distribution.
 
 For the Koopman Neural Forecaster, I plan to test several potential improvement directions. For example the selection of observable functions seems sub-optimal. There is some redundancy in the observable functions and there are only very few non-linear functions (discussed in more detail below), which are crucial for learning non-linear dynamics. Apart from reducing redundancy and increasing the non-linearity content of the observable functions, I aim to replace the (slow) attention mechanism with random feature kernels as described in [Rethinking Attention with Performers](https://arxiv.org/abs/2009.14794).
 
-### Interesting questions:
 
+
+#### Further questions
 Observables/measurement functions: Almost all observables of the KNF are linear functions of the system state $x$ and do not couple the coordinates $x_i$, for example of the
 form $\sin(\sum_i c_i x_j(t_i))$ with learned coefficients $c_i$. The $j$-th coordinate $x_j(t_i)$ of the dynamical state is evaluated in a short time-window $[t_0, t_1, \dots]$
 discretized by the $t_i$. Hence, the argument of the $\sin$ does not couple different coordinates, but it is only a linear superposition of the same coordinate evaluated at some previous time steps.
@@ -117,7 +127,7 @@ It would be interesting to improve the set of observables, i.e. to reduce the re
 nonlinear observables, i.e. interactions (-> improve performance). So far the interactions $x_i x_j$ are the only observables that couple the coordinates.
 
 
-### Contributions
+<!-- ## Contributions
 
 #### Model improvements
 - Implementation of additive combination of global and local Koopman operator:
@@ -129,5 +139,5 @@ nonlinear observables, i.e. interactions (-> improve performance). So far the in
 #### Data processing
 - Conversion of CLIMADA TCTracks into kooplearn and pytorch compatible data structures
 - Data quality and extract characteristic length scale from data (needed for kooplearn kernal models)
-- Data standardization and periodic centering of earth scale tropical cyclone data (discontinuous cut along the longitudinal coordinate for $\mathrm{lon} = +- 180^\circ$)
+- Data standardization and periodic centering of earth scale tropical cyclone data (discontinuous cut along the longitudinal coordinate for $\mathrm{lon} = +- 180^\circ$) -->
 
