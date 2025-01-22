@@ -29,7 +29,7 @@ on Mac and Linux, or
 ```
 on Windows.
 
-To install the package, first we have to install the CLIMADA dependency. This is not possible via PyPI, but has to be done directly from github.
+To install the package, first we have to install the CLIMADA dependency. This has to be done directly from GitHub, as PyPI does not include the latest CLIMADA package versions.
 First navigate to the location where you want to clone the CLIMADA github repostitory, then run
 ```
 git clone https://github.com/CLIMADA-project/climada_python.git
@@ -54,7 +54,9 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 
 
 
-## Project description
+# Project description
+
+## Koopman kernel based trajectory analysis
 
 ### Tropical cylones
 We use the CLIMADA package to import tropical cyclone dataset and for plotting. There are five main basins of tropical cylones, which are mainly considered in this repository:: East Pacific (EP), North Atlantic (NA), South Indian Ocean (SI), South Pacific (SP) and West Pacific (WP).
@@ -101,10 +103,24 @@ The plot shows the eigenfunction coordinates, embedded into a two-dimensional fe
 The identified nonlinear features are sufficient to discriminate the basins reasonably well and can be used, e.g., for classification of new tropical cyclone tracks.
 
 
+## Kernel based seq2seq architecture
 
-## Future Plan:
+The [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) is a deep learning architecture inspired by the Koopman operator framework. However, there are some parts of the architecture that are not very well grounded in Koopman operator theory. An additional downside of the approach are potentially unsuitable observable functions (which are hard-coded in the architecture).
+
+To improve upon the Koopman Neural Forecaster, I develop a deep learning architecture that more directly combines Koopman kernel methods with a seq2seq architecture. Using kernels alleviates the problem of observable selection. However, kernels usually require to read in and process the full dataset, which is exactly what you do not want to do in seq2seq models.
+
+To combine both approaches, the idea is to generate local kernels, local around the trajectory for which predictions should be generated, and to project the datapoints sequentially to the "correct" subspace of the full Koopman operator, acting on feature space.
+
+Development in `examples/koopman_seq2seq_kernel.ipynb`.
+
+
+
+## Koopman Neural Forecaster:
 
 ### Comparing kooplearn to the Koopman Neural Forecaster
+
+First test of the Koopman Neural Forecaster and plotting predictions of pre-trained models in `examples/knf_for_TC_first_example.ipynb` and `examples/knf_for_TC_plot_predictions.ipynb`.
+
 The kooplearn package implements a kernel-based approach for
 approximating Koopman operators in reproducing kernel Hilberg spaces (see [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) python package).
 I want to compare this approach to a transformer-based deep neurel network architecture [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF).
