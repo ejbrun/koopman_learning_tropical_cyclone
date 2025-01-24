@@ -205,6 +205,7 @@ class Koopman(nn.Module):
           latent_dim * self.num_feats + self.len_interas,
           latent_dim * self.num_feats + self.len_interas,
           bias=False)
+      # shape of input to global_linear_transform (batch_size, 1, self.num_feats * self.latent_dim + len(inter_lsts))
 
     ### Transformer Encoder: learning Local Koopman Operator ###
     self.encoder_layer = nn.TransformerEncoderLayer(
@@ -244,10 +245,13 @@ class Koopman(nn.Module):
       inps,  # input ts tensor
       num_steps  # num of prediction steps
   ):
+    # inps.shape (batch_size, input_length/input_dim, input_dim * num_feats)
 
     ##################### Encoding ######################
     # the encoder learns the coefficients of basis functions
     encoder_outs = self.encoder(inps)
+    # input_dim * self.num_feats -> (latent_dim + self.num_sins * 2) * input_dim * self.num_feats
+    # encoder_outs.shape (batch_size, input_length/input_dim, (latent_dim + self.num_sins * 2) * input_dim * self.num_feats)
 
     # reshape inputs and encoder outputs for next step
     encoder_outs = encoder_outs.reshape(inps.shape[0], inps.shape[1],
@@ -258,15 +262,20 @@ class Koopman(nn.Module):
                                         self.input_dim, self.num_feats)
     inps = inps.reshape(inps.shape[0], inps.shape[1], self.input_dim,
                         self.num_feats)
-
+    # inps.shape (batch_size, input_length/input_dim, input_dim, num_feats)
+    # encoder_outs.shape (batch_size, input_length/input_dim, (self.latent_dim + self.num_sins * 2), input_dim, num_feats)
+    
     # the input to the measurement functions are
     # the muliplication of coeffcients and original observations.
     coefs = torch.einsum("blkdf, bldf -> blfk", encoder_outs, inps)
+    # coefs.shape (batch_size, input_length/input_dim, num_feats, (self.latent_dim + self.num_sins * 2))
     #####################################################
 
     ################ Calculate Meausurements ############
     embedding = torch.zeros(encoder_outs.shape[0], encoder_outs.shape[1],
                             self.num_feats, self.latent_dim).to(inps.device)
+    # embedding.shape (batch_size, input_length/input_dim, self.num_feats, self.latent_dim)
+
     for f in range(self.num_feats):
       # polynomials
       for i in range(self.num_poly):
@@ -292,6 +301,7 @@ class Koopman(nn.Module):
                                             self.num_exp + self.num_sins * 4:]
 
     embedding = embedding.reshape(embedding.shape[0], embedding.shape[1], -1)
+    # embedding.shape (batch_size, input_length/input_dim, self.num_feats * self.latent_dim)
 
     # if there are multiple features,
     # second-order interaction terms should also be included
@@ -305,6 +315,7 @@ class Koopman(nn.Module):
             coefs[:, :, item[0], 0] * coefs[:, :, item[1], 0]
         )
       embedding = torch.cat([embedding, embedding_inter], dim=-1)
+      # embedding.shape (batch_size, input_length/input_dim, self.num_feats * self.latent_dim + len(inter_lsts))
 
     # Reconstruction
     reconstructions = self.decoder(embedding)
@@ -318,7 +329,8 @@ class Koopman(nn.Module):
     # Collect predicted measurements on the lookback window
     inp_embed_preds = []
     forw = embedding[:, :1]
-    for i in range(inps.shape[1] - 1):
+    # forw.shape (batch_size, 1, self.num_feats * self.latent_dim + len(inter_lsts))
+    for i in range(inps.shape[1] - 1): # inps.shape[1] = input_length/input_dim
       if self.global_local_combination == "multiplicative":
         if self.add_global_operator:
           forw = self.global_linear_transform(forw)
@@ -344,6 +356,9 @@ class Koopman(nn.Module):
     ########## Generate Predictions on the Forecasting Window ##########
     # If the predictions on the lookback window deviates a lot from groud truth,
     # adjust the koopman operator with the control module.
+    # FIXME linear_adj is build from the state space differerences, but acts on feature
+    # space (cannot be correct), seems to be also done this way in the paper.
+    # Note debugging shows the shape of linear_adj is actually the same as local_transform (check what diagflat is actually doing!)
     if self.add_control:
       pred_diff = inp_preds.reshape(
           inp_preds.shape[0], -1) - inps[:, 1:].reshape(inp_preds.shape[0], -1)
@@ -404,6 +419,7 @@ class Koopman(nn.Module):
 
   def forward(self, org_inps, tgts):
     # number of autoregressive step
+    # org_inps.shape (batch, input_length, num_feats), tgts.shape (batch, train_output_length, num_feats)
     auto_steps = tgts.shape[1] // self.num_steps
     if tgts.shape[1] % self.num_steps > 0:
       auto_steps += 1

@@ -4,15 +4,17 @@ from typing import Union
 
 import numpy as np
 import torch
-from klearn_tcyclone.climada.tc_tracks import TCTracks
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xarray import Dataset
 
+from klearn_tcyclone.climada.tc_tracks import TCTracks
 from klearn_tcyclone.data_utils import (
     LinearScaler,
     data_array_list_from_TCTracks,
     standardize_time_series_list,
 )
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TCTrackDataset(torch.utils.data.Dataset):
@@ -82,7 +84,9 @@ class TCTrackDataset(torch.utils.data.Dataset):
                 # For the test set we effectively set jumps to output_length, such that
                 # every trajectory is independent from each other, so we don't take
                 # all the shifted copies of a trajectory into account.
-                for j in range(0, len(item) - input_length - output_length, output_length):
+                for j in range(
+                    0, len(item) - input_length - output_length, output_length
+                ):
                     self.ts_indices.append((i, j))
         elif mode == "train" or "valid":
             # shuffle slices before split
