@@ -119,7 +119,7 @@ Development in `examples/koopman_seq2seq_kernel.ipynb`.
 
 ### Comparing kooplearn to the Koopman Neural Forecaster
 
-First test of the Koopman Neural Forecaster and plotting predictions of pre-trained models in `examples/knf_for_TC_first_example.ipynb` and `examples/knf_for_TC_plot_predictions.ipynb`.
+First tests of the Koopman Neural Forecaster and plotting predictions of pre-trained models in `examples/knf_for_TC_first_example.ipynb` and `examples/knf_for_TC_plot_predictions.ipynb`.
 
 The kooplearn package implements a kernel-based approach for
 approximating Koopman operators in reproducing kernel Hilberg spaces (see [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) python package).
@@ -129,18 +129,6 @@ transformers)), both capturing local respectively global behaviour of the time s
 that is designed to capture and correct for spontaneous, sudden shifts and distortions in the temporal distribution.
 
 For the Koopman Neural Forecaster, I plan to test several potential improvement directions. For example the selection of observable functions seems sub-optimal. There is some redundancy in the observable functions and there are only very few non-linear functions (discussed in more detail below), which are crucial for learning non-linear dynamics. Apart from reducing redundancy and increasing the non-linearity content of the observable functions, I aim to replace the (slow) attention mechanism with random feature kernels as described in [Rethinking Attention with Performers](https://arxiv.org/abs/2009.14794).
-
-
-
-#### Further questions
-Observables/measurement functions: Almost all observables of the KNF are linear functions of the system state $x$ and do not couple the coordinates $x_i$, for example of the
-form $\sin(\sum_i c_i x_j(t_i))$ with learned coefficients $c_i$. The $j$-th coordinate $x_j(t_i)$ of the dynamical state is evaluated in a short time-window $[t_0, t_1, \dots]$
-discretized by the $t_i$. Hence, the argument of the $\sin$ does not couple different coordinates, but it is only a linear superposition of the same coordinate evaluated at some previous time steps.
-Furthermore there is a substantial redundancy in the measurement functions. For example, the function $\sin(\sum_i c_i x_j(t_i))$ is included multiple times in the set of observables, each time with separate trainable $c_i$.
-The only non-linear functions included in the observables are simple products (only second order) of the form $x_i x_j$.
-
-It would be interesting to improve the set of observables, i.e. to reduce the redundancy (-> improve time complexity by keeping same performance) and to include more (and maybe more suitable)
-nonlinear observables, i.e. interactions (-> improve performance). So far the interactions $x_i x_j$ are the only observables that couple the coordinates.
 
 
 <!-- ## Contributions

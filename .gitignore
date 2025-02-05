@@ -8,3 +8,4 @@ data/
 train_models/training_results/
 *.log
 *logs/
+examples/runs
