@@ -27,6 +27,39 @@ class RBFKernel(KoopmanKernelTorch):
         return torch.exp(-euclidean_squared / (2 * self.length_scale**2))
 
 
+def _initialize_global_koopman_operator(num_nys_centers, input_length, context_mode):
+    if context_mode == "no_context":
+        global_koopman_operator = nn.Parameter(
+            torch.empty(
+                (num_nys_centers, num_nys_centers),
+                device=device,
+                dtype=torch.float32,
+            )
+        )
+    elif context_mode == "full_context":
+        global_koopman_operator = nn.Parameter(
+            torch.empty(
+                (num_nys_centers * input_length, num_nys_centers * input_length),
+                device=device,
+                dtype=torch.float32,
+            )
+        )
+    elif context_mode == "last_context":
+        global_koopman_operator = nn.Parameter(
+            torch.empty(
+                (num_nys_centers, num_nys_centers * input_length),
+                device=device,
+                dtype=torch.float32,
+            )
+        )
+    else:
+        raise Exception(f"{context_mode} is not a valid context_mode.")
+    
+    torch.nn.init.xavier_uniform_(
+        global_koopman_operator
+    )  # or any other init method
+    return global_koopman_operator
+
 class KoopmanKernelSeq2Seq(nn.Module):
     """Koopman Kernel Seq2Seq model.
 
@@ -44,6 +77,7 @@ class KoopmanKernelSeq2Seq(nn.Module):
         num_steps: int,
         num_nys_centers: int,
         rng_seed: float,
+        context_mode: str = "full_context",
     ):
         """Initialize the Koopman Kernel Seq2Seq model.
 
@@ -65,20 +99,16 @@ class KoopmanKernelSeq2Seq(nn.Module):
         self.output_length = output_length
         self.num_steps = num_steps
         self.num_nys_centers = num_nys_centers
+        self.context_mode = context_mode
         self.rng_seed = rng_seed
         self.rn_generator = torch.Generator()
         _ = self.rn_generator.manual_seed(self.rng_seed)
 
-        self.global_koopman_operator = nn.Parameter(
-            torch.empty(
-                (self.num_nys_centers, self.num_nys_centers),
-                device=device,
-                dtype=torch.float32,
-            )
+        self.global_koopman_operator = _initialize_global_koopman_operator(
+            self.num_nys_centers,
+            self.input_length,
+            self.context_mode,
         )
-        torch.nn.init.xavier_uniform_(
-            self.global_koopman_operator
-        )  # or any other init method
 
     # def initialize_nystroem_kernels(self, data_set):
     #     """Initialize the nystroem kernel matrix.
@@ -175,19 +205,50 @@ class KoopmanKernelSeq2Seq(nn.Module):
         Returns:
             torch.Tensor: output tensor of shape (batch_size, input_length, num_feats)
         """
-        kernel_nysX_X = self._kernel(self.nystrom_data_X, inps)
+        batch_size = inps.shape[0]
+        input_length = inps.shape[1]
+        if self.context_mode != "no_context":
+            assert input_length == self.input_length
+
+        kernel_nysX_X = self._kernel(self.nystrom_data_X, inps) * self.num_nys_centers**(-1/2)
         # shape: (batch_size, num_nys_centers, input_length)
-        kernel_nysY_Y = self._kernel(self.nystrom_data_Y, self.nystrom_data_Y)
+        kernel_nysY_Y = self._kernel(self.nystrom_data_Y, self.nystrom_data_Y) * self.num_nys_centers**(-1/2)
         # shape: (num_nys_centers, num_nys_centers)
         # kernel_nysY_Y = self._kernel(self.nystrom_data_Y, tgts)
         # # shape: (batch_size, num_nys_centers, input_length)
 
-        outs = torch.einsum("ij,bjl->bil", self.global_koopman_operator, kernel_nysX_X)
-        # shape: (batch_size, num_nys_centers, input_length)
-        outs = torch.einsum("ia,ij,bjl->bla", self.nystrom_data_Y, kernel_nysY_Y, outs)
-        # shape: (num_nys_centers, num_feats), (num_nys_centers, num_nys_centers),
-        # (batch_size, num_nys_centers, input_length)
-        # -> (batch_size, input_length, num_feats)
+        if self.context_mode == "no_context":
+            outs = torch.einsum("ki,ij,bjl->bkl", kernel_nysY_Y, self.global_koopman_operator, kernel_nysX_X)
+            # shape: (num_nys_centers, num_nys_centers), (num_nys_centers, num_nys_centers),
+            # (batch_size, num_nys_centers, input_length)
+            # -> (batch_size, num_nys_centers, input_length)
+            outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
+            # shape: (num_nys_centers, num_feats),
+            # (batch_size, num_nys_centers, input_length)
+            # -> (batch_size, input_length, num_feats)
+        elif self.context_mode == "full_context":
+            kernel_nysX_X = kernel_nysX_X.reshape(shape=(batch_size, self.num_nys_centers * self.input_length))
+            outs = torch.einsum("ij,bj->bi", self.global_koopman_operator, kernel_nysX_X)
+            # shape: (batch_size, num_nys_centers * input_length)
+            outs = outs.reshape(shape=(batch_size, self.num_nys_centers, self.input_length))
+            outs = torch.einsum("ij,bjl->bil", kernel_nysY_Y, outs)
+            # -> (batch_size, num_nys_centers, input_length)
+            
+            outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
+            # shape: (num_nys_centers, num_feats),
+            # (batch_size, num_nys_centers, input_length)
+            # -> (batch_size, input_length, num_feats)
+        elif self.context_mode == "last_context":
+            kernel_nysX_X = kernel_nysX_X.reshape(shape=(batch_size, self.num_nys_centers * self.input_length))
+            outs = torch.einsum("ij,bj->bi", self.global_koopman_operator, kernel_nysX_X)
+            # shape: (batch_size, num_nys_centers)
+            outs = torch.einsum("ij,bj->bi", kernel_nysY_Y, outs)
+            # -> (batch_size, num_nys_centers)
+            
+            outs = torch.einsum("ja,bj->ba", self.nystrom_data_Y, outs)
+            # shape: (num_nys_centers, num_feats),
+            # (batch_size, num_nys_centers)
+            # -> (batch_size, num_feats)
 
         return outs
 
@@ -199,6 +260,7 @@ class KoopKernelLoss(_Loss):
         self,
         nystrom_data_Y: torch.Tensor,
         kernel,
+        context_mode: str = "no_context",
         size_average=None,
         reduce=None,
         reduction: str = "mean",
@@ -206,6 +268,7 @@ class KoopKernelLoss(_Loss):
         super().__init__(size_average, reduce, reduction)
         self.nystrom_data_Y = nystrom_data_Y
         self._kernel = kernel
+        self.context_mode = context_mode
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Forward pass of KoopKernelLoss.
@@ -217,14 +280,16 @@ class KoopKernelLoss(_Loss):
         Returns:
             torch.Tensor: _description_
         """
-        kernel_nysY_Y = self._kernel(self.nystrom_data_Y, target)
-        # shape: (batch_size, num_nys_centers, input_length)
+        # kernel_nysY_Y = self._kernel(self.nystrom_data_Y, target)
+        # # shape: (batch_size, num_nys_centers, input_length)
 
-        target_transformed = torch.einsum(
-            "ja,bjl->bla", self.nystrom_data_Y, kernel_nysY_Y
-        )
-        # shape: (num_nys_centers, num_feats), (batch_size, num_nys_centers, input_length)
-        # -> (batch_size, input_length, num_feats)
+        # target_transformed = torch.einsum(
+        #     "ja,bjl->bla", self.nystrom_data_Y, kernel_nysY_Y
+        # )
+        # # shape: (num_nys_centers, num_feats), (batch_size, num_nys_centers, input_length)
+        # # -> (batch_size, input_length, num_feats)
+
+        target_transformed = target
 
         return F.mse_loss(input, target_transformed, reduction=self.reduction)
 
