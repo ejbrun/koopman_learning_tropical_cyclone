@@ -105,13 +105,18 @@ The identified nonlinear features are sufficient to discriminate the basins reas
 
 ## Kernel based seq2seq architecture
 
+[see `examples/koopman_seq2seq_kernel.ipynb`, work in progress]
+
 The [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) is a deep learning architecture inspired by the Koopman operator framework. However, there are some parts of the architecture that are not very well grounded in Koopman operator theory. An additional downside of the approach are potentially unsuitable observable functions (which are hard-coded in the architecture).
 
 To improve upon the Koopman Neural Forecaster, I develop a deep learning architecture that more directly combines Koopman kernel methods with a seq2seq architecture. Using kernels alleviates the problem of observable selection. However, kernels usually require to read in and process the full dataset, which is exactly what you do not want to do in seq2seq models.
 
-To combine both approaches, the idea is to generate local kernels, local around the trajectory for which predictions should be generated, and to project the datapoints sequentially to the "correct" subspace of the full Koopman operator, acting on feature space.
-
 Development in `examples/koopman_seq2seq_kernel.ipynb`.
+
+Preliminary results: Implementation of the seq2seq model based on the Nystroem kernel idea. As a first test, I compare three different implementations how the information from the context windows is used for the next-step-predictions (`no_context`, `full_context`, `last_context`). Results (MSE error versus training epochs) are below, the option `no_context` preforms bad, the other two options are comparable and achieve reasonably low MSE errors on the training data set.
+
+![Koopman eigenfunction analysis](./plots/koopman_seq2seq/context_mode_comparison.png)
+
 
 
 
