@@ -506,6 +506,8 @@ def standardized_context_dataset_from_TCTracks(
     periodic_shift: bool = True,
     basin: str | None = None,
     verbose: int = 0,
+    input_length: int | None = None,
+    output_length: int | None = None,
     backend: str = "auto",
     **backend_kw,
 ) -> TensorContextDataset:
@@ -521,15 +523,24 @@ def standardized_context_dataset_from_TCTracks(
         periodic_shift (bool, optional): _description_. Defaults to True.
         basin (str | None, optional): _description_. Defaults to None.
         verbose (int, optional): _description_. Defaults to 1.
+        input_length (int | None, optional): _description_. Defaults to None.
+        output_length (int | None, optional): _description_. Defaults to None.
         backend (str, optional): _description_. Defaults to "auto".
 
     Returns:
         TensorContextDataset: _description_
     """
+    if input_length is not None and output_length is not None:
+        con_len = input_length + output_length
+        print("intput_length and output_length are not None.")
+    else:
+        con_len = context_length
+        print("con_len set to context_length.")
+    
     tensor_context = context_dataset_from_TCTracks(
         tc_tracks,
         feature_list=feature_list,
-        context_length=context_length,
+        context_length=con_len,
         time_lag=time_lag,
         verbose=verbose,
         **backend_kw

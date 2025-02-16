@@ -54,11 +54,10 @@ def _initialize_global_koopman_operator(num_nys_centers, input_length, context_m
         )
     else:
         raise Exception(f"{context_mode} is not a valid context_mode.")
-    
-    torch.nn.init.xavier_uniform_(
-        global_koopman_operator
-    )  # or any other init method
+
+    torch.nn.init.xavier_uniform_(global_koopman_operator)  # or any other init method
     return global_koopman_operator
+
 
 class KoopmanKernelSeq2Seq(nn.Module):
     """Koopman Kernel Seq2Seq model.
@@ -210,45 +209,120 @@ class KoopmanKernelSeq2Seq(nn.Module):
         if self.context_mode != "no_context":
             assert input_length == self.input_length
 
-        kernel_nysX_X = self._kernel(self.nystrom_data_X, inps) * self.num_nys_centers**(-1/2)
+        kernel_nysX_X = self._kernel(
+            self.nystrom_data_X, inps
+        ) * self.num_nys_centers ** (-1 / 2)
         # shape: (batch_size, num_nys_centers, input_length)
-        kernel_nysY_Y = self._kernel(self.nystrom_data_Y, self.nystrom_data_Y) * self.num_nys_centers**(-1/2)
+        kernel_nysY_Y = self._kernel(
+            self.nystrom_data_Y, self.nystrom_data_Y
+        ) * self.num_nys_centers ** (-1 / 2)
         # shape: (num_nys_centers, num_nys_centers)
         # kernel_nysY_Y = self._kernel(self.nystrom_data_Y, tgts)
         # # shape: (batch_size, num_nys_centers, input_length)
 
         if self.context_mode == "no_context":
-            outs = torch.einsum("ki,ij,bjl->bkl", kernel_nysY_Y, self.global_koopman_operator, kernel_nysX_X)
-            # shape: (num_nys_centers, num_nys_centers), (num_nys_centers, num_nys_centers),
-            # (batch_size, num_nys_centers, input_length)
-            # -> (batch_size, num_nys_centers, input_length)
-            outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
-            # shape: (num_nys_centers, num_feats),
-            # (batch_size, num_nys_centers, input_length)
-            # -> (batch_size, input_length, num_feats)
+            if self.output_length == 1:
+                outs = torch.einsum(
+                    "ki,ij,bjl->bkl",
+                    kernel_nysY_Y,
+                    self.global_koopman_operator,
+                    kernel_nysX_X,
+                )
+                # shape: (num_nys_centers, num_nys_centers), (num_nys_centers, num_nys_centers),
+                # (batch_size, num_nys_centers, input_length)
+                # -> (batch_size, num_nys_centers, input_length)
+                outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers, input_length)
+                # -> (batch_size, input_length, num_feats)
+            else:
+                raise NotImplementedError("Not yet implemented.")
         elif self.context_mode == "full_context":
-            kernel_nysX_X = kernel_nysX_X.reshape(shape=(batch_size, self.num_nys_centers * self.input_length))
-            outs = torch.einsum("ij,bj->bi", self.global_koopman_operator, kernel_nysX_X)
-            # shape: (batch_size, num_nys_centers * input_length)
-            outs = outs.reshape(shape=(batch_size, self.num_nys_centers, self.input_length))
-            outs = torch.einsum("ij,bjl->bil", kernel_nysY_Y, outs)
-            # -> (batch_size, num_nys_centers, input_length)
-            
-            outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
-            # shape: (num_nys_centers, num_feats),
-            # (batch_size, num_nys_centers, input_length)
-            # -> (batch_size, input_length, num_feats)
+            kernel_nysX_X = kernel_nysX_X.reshape(
+                shape=(batch_size, self.num_nys_centers * self.input_length)
+            )
+            if self.output_length == 1:
+                outs = torch.einsum(
+                    "ij,bj->bi", self.global_koopman_operator, kernel_nysX_X
+                )
+                # shape: (batch_size, num_nys_centers * input_length)
+                outs = outs.reshape(
+                    shape=(batch_size, self.num_nys_centers, self.input_length)
+                )
+                outs = torch.einsum("ij,bjl->bil", kernel_nysY_Y, outs)
+                # -> (batch_size, num_nys_centers, input_length)
+                outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers, input_length)
+                # -> (batch_size, input_length, num_feats)
+            else:
+                outs = torch.zeros(
+                    size=(
+                        batch_size,
+                        self.num_nys_centers * self.input_length,
+                        self.output_length,
+                    ),
+                    device=device,
+                    dtype=torch.float32,
+                )
+                out = kernel_nysX_X
+                for idx in range(self.output_length):
+                    out = torch.einsum("ij,bj->bi", self.global_koopman_operator, out)
+                    outs[:, :, idx] = out
+                # shape: (batch_size, num_nys_centers * input_length, output_length)
+                outs = outs.reshape(
+                    shape=(
+                        batch_size,
+                        self.num_nys_centers,
+                        self.input_length,
+                        self.output_length,
+                    )
+                )
+                outs = torch.einsum("ij,bjlo->bilo", kernel_nysY_Y, outs)
+                # -> (batch_size, num_nys_centers, input_length, output_length)
+                outs = torch.einsum("ja,bjlo->bloa", self.nystrom_data_Y, outs)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers, input_length, output_length)
+                # -> (batch_size, input_length, output_length, num_feats)
         elif self.context_mode == "last_context":
-            kernel_nysX_X = kernel_nysX_X.reshape(shape=(batch_size, self.num_nys_centers * self.input_length))
-            outs = torch.einsum("ij,bj->bi", self.global_koopman_operator, kernel_nysX_X)
-            # shape: (batch_size, num_nys_centers)
-            outs = torch.einsum("ij,bj->bi", kernel_nysY_Y, outs)
-            # -> (batch_size, num_nys_centers)
-            
-            outs = torch.einsum("ja,bj->ba", self.nystrom_data_Y, outs)
-            # shape: (num_nys_centers, num_feats),
-            # (batch_size, num_nys_centers)
-            # -> (batch_size, num_feats)
+            if self.output_length == 1:
+                kernel_nysX_X = kernel_nysX_X.reshape(
+                    shape=(batch_size, self.num_nys_centers * self.input_length)
+                )
+                outs = torch.einsum(
+                    "ij,bj->bi", self.global_koopman_operator, kernel_nysX_X
+                )
+                # shape: (batch_size, num_nys_centers)
+                outs = torch.einsum("ij,bj->bi", kernel_nysY_Y, outs)
+                # -> (batch_size, num_nys_centers)
+                outs = torch.einsum("ja,bj->ba", self.nystrom_data_Y, outs)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers)
+                # -> (batch_size, num_feats)
+            else:
+                outs = torch.zeros(
+                    size=(batch_size, self.num_nys_centers, self.output_length),
+                    device=device,
+                    dtype=torch.float32,
+                )
+                out = kernel_nysX_X
+                # shape: (batch_size, num_nys_centers, input_length)
+                for idx in range(self.output_length):
+                    out_flat = out.reshape(
+                        shape=(batch_size, self.num_nys_centers * self.input_length)
+                    )
+                    next_out = torch.einsum("ij,bj->bi", self.global_koopman_operator, out_flat)
+                    # shape: (batch_size, num_nys_centers)
+                    out = torch.cat([out[:, :, 1:], next_out.unsqueeze(dim=2)], dim=2)
+                    # shape: (batch_size, num_nys_centers, input_length)
+                    outs[:, :, idx] = out[:, :, -1]
+                # shape: (batch_size, num_nys_centers, output_length)
+                outs = torch.einsum("ij,bjo->bio", kernel_nysY_Y, outs)
+                # -> (batch_size, num_nys_centers, output_length)
+                outs = torch.einsum("ja,bjo->boa", self.nystrom_data_Y, outs)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers, output_length)
+                # -> (batch_size, output_length, num_feats)
 
         return outs
 
@@ -295,47 +369,65 @@ class KoopKernelLoss(_Loss):
 
 
 def batch_tensor_context(
-    tensor_context: TensorContextDataset, batch_size: int, flag_params: dict
-):
-    tensor_context_inps = torch.tensor(
-        tensor_context.lookback(tensor_context.context_length - 1), dtype=torch.float32
-    ).to(device)
-    tensor_context_tgts = torch.tensor(
-        tensor_context.lookback(tensor_context.context_length - 1, slide_by=1),
-        dtype=torch.float32,
-    ).to(device)
+    tensor_context: TensorContextDataset,
+    batch_size: int,
+    input_length: int,
+    output_length: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    if tensor_context.context_length != input_length + output_length:
+        raise Exception(
+            f"""
+            tensor_context.context_lenght (={tensor_context.context_length}) must be
+            equal to input_length (={input_length}) + output_length (={output_length}).
+            """
+        )
+    if output_length == 1:
+        tensor_context_inps = torch.tensor(
+            tensor_context.lookback(input_length), dtype=torch.float32
+        ).to(device)
+        tensor_context_tgts = torch.tensor(
+            tensor_context.lookback(input_length, slide_by=1),
+            dtype=torch.float32,
+        ).to(device)
+    else:
+        tensor_context_inps = torch.tensor(
+            tensor_context.lookback(input_length), dtype=torch.float32
+        ).to(device)
+        tensor_context_tgts = torch.tensor(
+            [
+                tensor_context.lookback(input_length, slide_by=idx + 1)
+                for idx in range(output_length)
+            ],
+            dtype=torch.float32,
+        ).to(device)
+        tensor_context_tgts = torch.einsum("abcd->bcad", tensor_context_tgts)
 
     # tensor_context_torch = torch.tensor(tensor_context.data, dtype=torch.float32).to(
     #     device
     # )
 
+    # FIXME add random seed to randperm.
     rand_perm = torch.randperm(tensor_context_inps.shape[0])
-    integer_divisor = tensor_context_inps.shape[0] // flag_params["batch_size"]
+    integer_divisor = tensor_context_inps.shape[0] // batch_size
 
     tensor_context_inps = tensor_context_inps[rand_perm]
     tensor_context_tgts = tensor_context_tgts[rand_perm]
 
-    tensor_context_inps = tensor_context_inps[
-        : integer_divisor * flag_params["batch_size"]
-    ]
-    tensor_context_tgts = tensor_context_tgts[
-        : integer_divisor * flag_params["batch_size"]
-    ]
+    tensor_context_inps = tensor_context_inps[: integer_divisor * batch_size]
+    tensor_context_tgts = tensor_context_tgts[: integer_divisor * batch_size]
 
     tensor_context_inps = tensor_context_inps.reshape(
         shape=[
-            flag_params["batch_size"],
+            batch_size,
             integer_divisor,
-            tensor_context_inps.shape[1],
-            tensor_context_inps.shape[2],
+            *tensor_context_inps.shape[1:],
         ]
     )
     tensor_context_tgts = tensor_context_tgts.reshape(
         shape=[
-            flag_params["batch_size"],
+            batch_size,
             integer_divisor,
-            tensor_context_tgts.shape[1],
-            tensor_context_tgts.shape[2],
+            *tensor_context_tgts.shape[1:],
         ]
     )
 
