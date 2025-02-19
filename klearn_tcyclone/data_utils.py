@@ -404,6 +404,8 @@ def standardize_time_series_list(
     linear scaler, which transform the data by a affine linear transformation to a
     target rectangular domain.
 
+    FIXME add periodic_shift, see data_utils.periodic_shift()
+
     Args:
         time_series_list (TensorContextDataset): _description_
         scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
