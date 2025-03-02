@@ -534,10 +534,8 @@ def standardized_context_dataset_from_TCTracks(
     """
     if input_length is not None and output_length is not None:
         con_len = input_length + output_length
-        print("intput_length and output_length are not None.")
     else:
         con_len = context_length
-        print("con_len set to context_length.")
     
     tensor_context = context_dataset_from_TCTracks(
         tc_tracks,

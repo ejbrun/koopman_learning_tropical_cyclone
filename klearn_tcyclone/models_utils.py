@@ -36,8 +36,8 @@ def runner(model: Union[Kernel, NystroemKernel], contexts, stop: int) -> dict:
     results["fit_time"] = fit_time
     results["X_pred_train"] = X_pred_train
     results["X_true_train"] = X_true_train
-    results["X_pred_test"]= X_pred_test
-    results["X_true_test"]= X_true_test
+    results["X_pred_test"] = X_pred_test
+    results["X_true_test"] = X_true_test
 
     # results["RMSE_onestep_train_error"] = np.sqrt(
     #     np.mean((X_pred_train - X_true_train) ** 2)
@@ -103,3 +103,136 @@ def predict_time_series(
         time_series_data.append(current_context.data[:, -1])
     time_series_data = np.array(time_series_data).transpose((1, 0, 2))
     return time_series_data
+
+
+def get_model_name(flag_params: dict) -> str:
+    """Get model name.
+
+    Args:
+        flag_params (dict): _description_
+
+    Raises:
+        Exception: _description_
+
+    Returns:
+        str: _description_
+    """
+    if flag_params["model"] == "KNF":
+        encoder_hidden_dim = flag_params["hidden_dim"]
+        decoder_hidden_dim = flag_params["hidden_dim"]
+        encoder_num_layers = flag_params["num_layers"]
+        decoder_num_layers = flag_params["num_layers"]
+        model_name = "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+            flag_params["seed"],
+            flag_params["jumps"],
+            flag_params["data_freq"],
+            flag_params["num_poly"],
+            flag_params["num_sins"],
+            flag_params["num_exp"],
+            flag_params["batch_size"],
+            flag_params["learning_rate"],
+            flag_params["decay_rate"],
+            flag_params["input_dim"],
+            flag_params["input_length"],
+            flag_params["train_output_length"],
+            flag_params["num_steps"],
+            encoder_hidden_dim,
+            decoder_hidden_dim,
+            flag_params["transformer_dim"],
+            flag_params["control_hidden_dim"],
+            encoder_num_layers,
+            decoder_num_layers,
+            flag_params["transformer_num_layers"],
+            flag_params["control_num_layers"],
+            flag_params["latent_dim"],
+            flag_params["use_revin"],
+            flag_params["use_instancenorm"],
+            flag_params["regularize_rank"],
+            flag_params["add_global_operator"],
+            flag_params["add_control"],
+        )
+    elif flag_params["model"] == "koopkernelseq":
+        model_name = "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_kknc{}_kkls{}".format(  # noqa: E501, UP032
+            flag_params["seed"],
+            flag_params["jumps"],
+            flag_params["data_freq"],
+            flag_params["batch_size"],
+            flag_params["learning_rate"],
+            flag_params["decay_rate"],
+            flag_params["input_dim"],
+            flag_params["input_length"],
+            flag_params["train_output_length"],
+            flag_params["num_steps"],
+            flag_params["koopman_kernel_num_centers"],
+            flag_params["koopman_kernel_length_scale"],
+        )
+    else:
+        raise Exception("Wrong model_str.")
+
+    return model_name
+
+
+def get_model_name_old(flag_params: dict) -> str:
+    """Get model name.
+
+    Args:
+        flag_params (dict): _description_
+
+    Raises:
+        Exception: _description_
+
+    Returns:
+        str: _description_
+    """
+    if flag_params["model"] == "KNF":
+        encoder_hidden_dim = flag_params["hidden_dim"]
+        decoder_hidden_dim = flag_params["hidden_dim"]
+        encoder_num_layers = flag_params["num_layers"]
+        decoder_num_layers = flag_params["num_layers"]
+        model_name = "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
+            flag_params["seed"],
+            flag_params["jumps"],
+            flag_params["data_freq"],
+            flag_params["num_poly"],
+            flag_params["num_sins"],
+            flag_params["num_exp"],
+            flag_params["batch_size"],
+            flag_params["learning_rate"],
+            flag_params["decay_rate"],
+            flag_params["input_dim"],
+            flag_params["input_length"],
+            flag_params["train_output_length"],
+            flag_params["num_steps"],
+            encoder_hidden_dim,
+            decoder_hidden_dim,
+            flag_params["transformer_dim"],
+            flag_params["control_hidden_dim"],
+            encoder_num_layers,
+            decoder_num_layers,
+            flag_params["transformer_num_layers"],
+            flag_params["control_num_layers"],
+            flag_params["latent_dim"],
+            flag_params["use_revin"],
+            flag_params["use_instancenorm"],
+            flag_params["regularize_rank"],
+            flag_params["add_global_operator"],
+            flag_params["add_control"],
+        )
+    elif flag_params["model"] == "koopkernelseq":
+        model_name = "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_kknc{}".format(  # noqa: E501, UP032
+            flag_params["seed"],
+            flag_params["jumps"],
+            flag_params["data_freq"],
+            flag_params["batch_size"],
+            flag_params["learning_rate"],
+            flag_params["decay_rate"],
+            flag_params["input_dim"],
+            flag_params["input_length"],
+            flag_params["train_output_length"],
+            flag_params["num_steps"],
+            flag_params["koopman_kernel_num_centers"],
+        )
+    else:
+        raise Exception("Wrong model_str.")
+
+    return model_name

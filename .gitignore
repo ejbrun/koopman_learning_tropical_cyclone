@@ -9,3 +9,4 @@ train_models/training_results/
 *.log
 *logs/
 examples/runs
+examples/training_results
