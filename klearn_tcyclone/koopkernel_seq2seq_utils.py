@@ -416,7 +416,6 @@ def train_KKSeq2Seq(
     all_train_rmses, all_eval_rmses = [], []
     best_eval_rmse = 1e6
 
-    epoch_index = 1
     for epoch_index, epoch in enumerate(range(num_epochs)):
         start_time = time.time()
 
@@ -619,7 +618,6 @@ def train_koopkernel_seq2seq_model(
     basin: str,
     log_file_handler: logging.FileHandler,
     results_dir: str,
-    context_mode: str = "last_context",
     save_model: str = "best",
 ) -> NystroemKoopKernelSequencer:
     """Train Koopman kernel sequence model.
@@ -631,7 +629,6 @@ def train_koopkernel_seq2seq_model(
         basin (str): _description_
         log_file_handler (_type_): _description_
         results_dir (str): _description_
-        context_mode (str, optional): _description_. Defaults to "last_context".
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
@@ -674,7 +671,7 @@ def train_koopkernel_seq2seq_model(
         num_steps=1,
         num_nys_centers=flag_params["koopman_kernel_num_centers"],
         rng_seed=42,
-        context_mode=context_mode,
+        context_mode=flag_params["context_mode"],
     )
 
     model = train_KKSeq2Seq(

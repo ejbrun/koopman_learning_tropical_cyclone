@@ -152,7 +152,7 @@ def get_model_name(flag_params: dict) -> str:
             flag_params["add_control"],
         )
     elif flag_params["model"] == "koopkernelseq":
-        model_name = "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_kknc{}_kkls{}".format(  # noqa: E501, UP032
+        model_name = "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_kknc{}_kkls{}_ctxm{}".format(  # noqa: E501, UP032
             flag_params["seed"],
             flag_params["jumps"],
             flag_params["data_freq"],
@@ -165,6 +165,7 @@ def get_model_name(flag_params: dict) -> str:
             flag_params["num_steps"],
             flag_params["koopman_kernel_num_centers"],
             flag_params["koopman_kernel_length_scale"],
+            flag_params["context_mode"],
         )
     else:
         raise Exception("Wrong model_str.")
