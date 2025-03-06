@@ -38,7 +38,7 @@ feature_list = [
 koopman_kernel_length_scale_arr = [0.06, 0.08, 0.1, 0.12, 0.14]
 # koopman_kernel_length_scale_arr = [1e-2, 1e-1, 1e0, 1e1]
 # koopman_kernel_num_centers_arr = [100, 200]
-koopman_kernel_num_centers_arr = [1000]
+koopman_kernel_num_centers_arr = [1000, 2000]
 # koopman_kernel_num_centers_arr = [1000, 2000]
 tc_tracks_time_step = 3.0
 
@@ -60,9 +60,10 @@ flag_params["train_output_length"] = 1
 flag_params["test_output_length"] = flag_params["train_output_length"]
 if flag_params["context_mode"] == "no_context":
     flag_params["input_length"] = 4 # small input_length for context_mode = no_context
+    flag_params["input_dim"] = 1
 else:
     flag_params["input_length"] = 12
-flag_params["input_dim"] = 6
+    flag_params["input_dim"] = 6
 flag_params["num_steps"] = 3
 flag_params["context_length"] = (
     flag_params["input_length"] + flag_params["train_output_length"]
@@ -73,10 +74,9 @@ flag_params["basin"] = "NA"
 
 
 
-assert (
-    flag_params["context_length"]
-    == flag_params["input_length"] + flag_params["train_output_length"]
-)
+
+if flag_params["context_length"] != flag_params["input_length"] + flag_params["train_output_length"]:
+    raise Exception("context_length must be input_length + train_output_length")
 if flag_params["input_length"] % flag_params["input_dim"] != 0:
     raise Exception("input_length must be divisible by input_dim")
 
