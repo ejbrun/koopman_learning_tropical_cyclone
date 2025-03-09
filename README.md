@@ -46,10 +46,10 @@ to install the project.
 
 To install torch CUDA, please follow the instructions at https://pytorch.org/get-started/locally/ depending on your CUDA version.s
 
-For Compute Platform CUDA 12.4 and higher one can use the following
+For Compute Platform CUDA 12.6 and higher one can use the following
 
 ```
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
 
