@@ -1,7 +1,9 @@
 """Utils for Koopman Kernel Seq2Seq architecture."""
 
 import os
-import time
+# import time
+
+from time import time
 
 # from datetime import datetime
 import logging
@@ -46,6 +48,25 @@ def batch_tensor_context(
     input_length: int,
     output_length: int,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    """Get batched tensor context.
+
+    Args:
+        tensor_context (TensorContextDataset): Tensor context of shape
+            (n_data, input_length + output_length, num_feats).
+        batch_size (int): Batch size.
+        input_length (int): Input length.
+        output_length (int): Output length.
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor]: Tuple of batched input and output tensor
+            contexts, with shapes
+            output_length = 1:
+            (batch_size, n_data // batch_size, input_length, num_feats) and
+            (batch_size, n_data // batch_size, input_length, num_feats).
+            output_length > 1:
+            (batch_size, n_data // batch_size, input_length, num_feats) and
+            (batch_size, n_data // batch_size, input_length, output_length, num_feats).
+    """
     if tensor_context.context_length != input_length + output_length:
         raise Exception(
             f"""
@@ -57,26 +78,27 @@ def batch_tensor_context(
         tensor_context_inps = torch.tensor(
             tensor_context.lookback(input_length), dtype=torch.float32
         ).to(device)
+        # shape: (n_data, input_length, num_feats)
         tensor_context_tgts = torch.tensor(
             tensor_context.lookback(input_length, slide_by=1),
             dtype=torch.float32,
         ).to(device)
+        # shape: (n_data, input_length, num_feats)
     else:
         tensor_context_inps = torch.tensor(
             tensor_context.lookback(input_length), dtype=torch.float32
         ).to(device)
+        # shape: (n_data, input_length, num_feats)
         tensor_context_tgts = torch.tensor(
-            [
+            np.array([
                 tensor_context.lookback(input_length, slide_by=idx + 1)
                 for idx in range(output_length)
-            ],
+            ]),
             dtype=torch.float32,
         ).to(device)
+        # shape: (output_length, n_data, input_length, num_feats)
         tensor_context_tgts = torch.einsum("abcd->bcad", tensor_context_tgts)
-
-    # tensor_context_torch = torch.tensor(tensor_context.data, dtype=torch.float32).to(
-    #     device
-    # )
+        # shape: (n_data, input_length, output_length, num_feats)
 
     # FIXME add random seed to randperm.
     rand_perm = torch.randperm(tensor_context_inps.shape[0])
@@ -95,6 +117,7 @@ def batch_tensor_context(
             *tensor_context_inps.shape[1:],
         ]
     )
+    # shape: (batch_size, n_data // batch_size, input_length, num_feats)
     tensor_context_tgts = tensor_context_tgts.reshape(
         shape=[
             batch_size,
@@ -102,6 +125,7 @@ def batch_tensor_context(
             *tensor_context_tgts.shape[1:],
         ]
     )
+    # shape: (batch_size, n_data // batch_size, input_length, output_length, num_feats)
 
     return tensor_context_inps, tensor_context_tgts
 
@@ -121,7 +145,34 @@ def standardized_batched_context_from_TCTracks(
     output_length: int | None = None,
     backend: str = "auto",
     **backend_kw,
-) -> TensorContextDataset:
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Generate standardized and batched tensor contexts for inputs and outputs.
+
+    Args:
+        tc_tracks (TCTracks): _description_
+        batch_size (int): _description_
+        feature_list (list[str]): _description_
+        scaler (StandardScaler | MinMaxScaler | LinearScaler): _description_
+        context_length (int, optional): _description_. Defaults to 2.
+        time_lag (int, optional): _description_. Defaults to 1.
+        fit (bool, optional): _description_. Defaults to True.
+        periodic_shift (bool, optional): _description_. Defaults to True.
+        basin (str | None, optional): _description_. Defaults to None.
+        verbose (int, optional): _description_. Defaults to 0.
+        input_length (int | None, optional): _description_. Defaults to None.
+        output_length (int | None, optional): _description_. Defaults to None.
+        backend (str, optional): _description_. Defaults to "auto".
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor]: Tuple of batched input and output tensor
+            contexts, with shapes
+            output_length = 1:
+            (batch_size, n_data // batch_size, input_length, num_feats) and
+            (batch_size, n_data // batch_size, input_length, num_feats).
+            output_length > 1:
+            (batch_size, n_data // batch_size, input_length, num_feats) and
+            (batch_size, n_data // batch_size, input_length, output_length, num_feats).
+    """
     tensor_context = standardized_context_dataset_from_TCTracks(
         tc_tracks,
         feature_list,
@@ -137,12 +188,15 @@ def standardized_batched_context_from_TCTracks(
         backend,
         **backend_kw,
     )
+    # shape: (n_data, input_length + output_length, num_feats)
     tensor_context_inps, tensor_context_tgts = batch_tensor_context(
         tensor_context,
         batch_size=batch_size,
         input_length=input_length,
         output_length=output_length,
     )
+    # shapes: (batch_size, n_data // batch_size, input_length, num_feats) or
+    # (batch_size, n_data // batch_size, input_length, output_length, num_feats)
     return tensor_context_inps, tensor_context_tgts
 
 
@@ -153,11 +207,29 @@ def train_one_epoch(
     tensor_context_inps: torch.tensor,
     tensor_context_tgts: torch.tensor,
 ) -> float:
+    """Train one epoch.
+
+    Args:
+        model (NystroemKoopKernelSequencer): _description_
+        optimizer (Optimizer): _description_
+        loss_fun (KoopKernelLoss): _description_
+        tensor_context_inps (torch.tensor): Input tensor context with shape
+            (batch_size, n_data // batch_size, input_length, num_feats).
+        tensor_context_tgts (torch.tensor): Output tensor context with shape
+            output_length = 1:
+            (batch_size, n_data // batch_size, input_length, num_feats), 
+            output_length > 1:
+            (batch_size, n_data // batch_size, input_length, output_length, num_feats).
+        
+    Returns:
+        float: Square root of MSL.
+    """
     train_loss = []
     for i in range(tensor_context_inps.shape[1]):
         # Every data instance is an input + label pair
         inputs, labels = tensor_context_inps[:, i], tensor_context_tgts[:, i]
         if model.context_mode == "last_context":
+            #FIXME This might not work for output_length > 1.
             labels = labels[:, -1, :]
 
         # Make predictions for this batch
@@ -354,6 +426,8 @@ def train_KKSeq2Seq(
             **backend_kw,
         )
     )
+    # shapes: (batch_size, n_data // batch_size, input_length, num_feats) or
+    # (batch_size, n_data // batch_size, input_length, output_length, num_feats)
     tensor_context_inps_valid, tensor_context_tgts_valid = (
         standardized_batched_context_from_TCTracks(
             tc_tracks_valid,
@@ -416,8 +490,9 @@ def train_KKSeq2Seq(
     all_train_rmses, all_eval_rmses = [], []
     best_eval_rmse = 1e6
 
+    training_time_start = time()
     for epoch_index, epoch in enumerate(range(num_epochs)):
-        start_time = time.time()
+        start_time = time()
 
         train_rmse = train_one_epoch(
             model,
@@ -479,13 +554,15 @@ def train_KKSeq2Seq(
         ) > np.mean(all_eval_rmses[-20:-10]):
             break
 
-        epoch_time = time.time() - start_time
+        epoch_time = time() - start_time
         scheduler.step()
         logger.info(
             "Epoch {} | T: {:0.2f} | Train RMSE: {:0.3f} | Valid RMSE: {:0.3f}".format(  # noqa: UP032
                 epoch + 1, epoch_time / 60, train_rmse, eval_rmse
             )
         )
+
+    training_runtime = time() - training_time_start
 
     logger.info("Evaluate test metric.")
     _, test_preds, test_tgts = eval_one_epoch(
@@ -503,6 +580,7 @@ def train_KKSeq2Seq(
             ),  # FIXME eval_metric() here is a tuple of four elements, why? Should be a single number.
             "train_rmses": all_train_rmses,
             "eval_rmses": all_eval_rmses,
+            "training_runtime": training_runtime,
         },
         os.path.join(results_dir, "test_" + model_name + ".pt"),
     )
@@ -643,22 +721,6 @@ def train_koopkernel_seq2seq_model(
     eval_metric = RMSE_TCTracks
 
     model_name = get_model_name(flag_params)
-    # model_name = (
-    #     "seed{}_jumps{}_freq{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_kknc{}".format(  # noqa: E501, UP032
-    #         flag_params["seed"],
-    #         flag_params["jumps"],
-    #         flag_params["data_freq"],
-    #         flag_params["batch_size"],
-    #         flag_params["learning_rate"],
-    #         flag_params["decay_rate"],
-    #         flag_params["input_dim"],
-    #         flag_params["input_length"],
-    #         flag_params["train_output_length"],
-    #         flag_params["num_steps"],
-    #         flag_params["koopman_kernel_num_centers"]
-    #     )
-    # )
-
     results_file_name = os.path.join(results_dir, model_name)
 
     rbf = RBFKernel(length_scale=flag_params["koopman_kernel_length_scale"])
@@ -672,6 +734,9 @@ def train_koopkernel_seq2seq_model(
         num_nys_centers=flag_params["koopman_kernel_num_centers"],
         rng_seed=42,
         context_mode=flag_params["context_mode"],
+        mask_koopman_operator=flag_params["mask_koopman_operator"],
+        mask_version=flag_params["mask_version"],
+        use_nystroem_context_window=flag_params["use_nystroem_context_window"],
     )
 
     model = train_KKSeq2Seq(

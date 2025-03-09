@@ -3,9 +3,9 @@
 import logging
 import os
 import random
-
-from datetime import datetime
 import time
+from datetime import datetime
+from itertools import product
 
 import numpy as np
 
@@ -33,14 +33,26 @@ feature_list = [
 ]
 
 
-# Set flag_params
+# Set training settings
+training_settings = {
+    "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
+    "koopman_kernel_num_centers": [1000],
+    "context_mode": ["full_context", "last_context"],
+    # "context_mode": ["no_context", "full_context", "last_context"],
+    "mask_koopman_operator": [True, False],
+    "mask_version": [1],
+    # "mask_version": [0, 1],
+    "use_nystroem_context_window": [False, True],
+    "output_length": [1],
+}
 # koopman_kernel_length_scale_arr = [0.16, 0.18, 0.2, 0.22, 0.24]
-koopman_kernel_length_scale_arr = [0.06, 0.08, 0.1, 0.12, 0.14]
+# koopman_kernel_length_scale_arr = [0.06, 0.08, 0.1, 0.12, 0.14]
 # koopman_kernel_length_scale_arr = [1e-2, 1e-1, 1e0, 1e1]
 # koopman_kernel_num_centers_arr = [100, 200]
-koopman_kernel_num_centers_arr = [1000]
+# koopman_kernel_num_centers_arr = [1000]
 # koopman_kernel_num_centers_arr = [1000, 2000]
 tc_tracks_time_step = 3.0
+
 
 flag_params = {
     # "year_range": [1980, 2021],
@@ -48,37 +60,20 @@ flag_params = {
     "year_range": [2000, 2021],
 }
 flag_params = extend_by_default_flag_values(flag_params)
-
-flag_params["context_mode"] = "no_context"
-# flag_params["context_mode"] = "last_context"
-# FIXME add context_mode to default flat_params parameters
+# FIXME add context_mode, mask_koopman_operator, mask_version,
+#   use_nystroem_context_window to default flat_params parameters
 
 flag_params["batch_size"] = 32
 # flag_params["num_epochs"] = 10
 flag_params["num_epochs"] = 100
-flag_params["train_output_length"] = 1
-flag_params["test_output_length"] = flag_params["train_output_length"]
-if flag_params["context_mode"] == "no_context":
-    flag_params["input_length"] = 4 # small input_length for context_mode = no_context
-else:
-    flag_params["input_length"] = 12
-flag_params["input_dim"] = 6
-flag_params["num_steps"] = 3
-flag_params["context_length"] = (
-    flag_params["input_length"] + flag_params["train_output_length"]
-)
+
+flag_params["num_steps"] = 1
+#FIXME Remove num_steps, not accessed for the KooplearnSequencer.
 flag_params["time_step_h"] = tc_tracks_time_step
 flag_params["basin"] = "NA"
 
 
 
-
-assert (
-    flag_params["context_length"]
-    == flag_params["input_length"] + flag_params["train_output_length"]
-)
-if flag_params["input_length"] % flag_params["input_dim"] != 0:
-    raise Exception("input_length must be divisible by input_dim")
 
 
 random.seed(flag_params["seed"])  # python random generator
@@ -165,17 +160,77 @@ for model_str in model_strings:
 
     logger.info(flag_params)
 
-    for koopman_kernel_length_scale in koopman_kernel_length_scale_arr:
-        for koopman_kernel_num_centers in koopman_kernel_num_centers_arr:
-            flag_params["koopman_kernel_length_scale"] = koopman_kernel_length_scale
-            flag_params["koopman_kernel_num_centers"] = koopman_kernel_num_centers
-            logger.info(flag_params)
+    for (
+        koopman_kernel_length_scale,
+        koopman_kernel_num_centers,
+        context_mode,
+        mask_koopman_operator,
+        mask_version,
+        use_nystroem_context_window,
+        output_length,
+    ) in product(*training_settings.values()):
 
-            model_koopkernelseq = train_koopkernel_seq2seq_model(
-                tc_tracks,
-                feature_list,
-                flag_params,
-                basin=flag_params["basin"],
-                log_file_handler=fileHandler,
-                results_dir=results_dir,
+        print()
+        print()
+        print("=============================================================")
+        print("Iteration:")
+        print(
+            koopman_kernel_length_scale,
+            koopman_kernel_num_centers,
+            context_mode,
+            mask_koopman_operator,
+            mask_version,
+            use_nystroem_context_window,
+            output_length,
+        )
+        if not mask_koopman_operator:
+            if mask_version == 1:
+                print("Skip iteration.")
+                continue
+        if context_mode == "last_context":
+            if mask_koopman_operator:
+                print("Skip iteration.")
+                continue
+            if mask_version == 1:
+                print("Skip iteration.")
+                continue
+
+        flag_params["train_output_length"] = output_length
+        flag_params["test_output_length"] = flag_params["train_output_length"]
+
+        flag_params["koopman_kernel_length_scale"] = koopman_kernel_length_scale
+        flag_params["koopman_kernel_num_centers"] = koopman_kernel_num_centers
+        flag_params["context_mode"] = context_mode
+        flag_params["mask_koopman_operator"] = mask_koopman_operator
+        flag_params["mask_version"] = mask_version
+        flag_params["use_nystroem_context_window"] = use_nystroem_context_window
+        if flag_params["context_mode"] == "no_context":
+            flag_params["input_length"] = (
+                4  # small input_length for context_mode = no_context
             )
+            flag_params["input_dim"] = 1
+        else:
+            flag_params["input_length"] = 12
+            flag_params["input_dim"] = 4
+        flag_params["context_length"] = (
+            flag_params["input_length"] + flag_params["train_output_length"]
+        )
+        assert (
+            flag_params["context_length"]
+            == flag_params["input_length"] + flag_params["train_output_length"]
+        )
+        if flag_params["input_length"] % flag_params["input_dim"] != 0:
+            raise Exception("input_length must be divisible by input_dim")
+
+
+
+        logger.info(flag_params)
+
+        model_koopkernelseq = train_koopkernel_seq2seq_model(
+            tc_tracks,
+            feature_list,
+            flag_params,
+            basin=flag_params["basin"],
+            log_file_handler=fileHandler,
+            results_dir=results_dir,
+        )

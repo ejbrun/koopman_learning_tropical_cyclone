@@ -54,6 +54,7 @@ class NystroemKoopKernelSequencer(nn.Module):
         rng_seed: float,
         context_mode: str = "full_context",
         mask_koopman_operator: bool = False,
+        mask_version: int = 0,
         use_nystroem_context_window: bool = False,
     ):
         """Initialize the Koopman Kernel Seq2Seq model.
@@ -75,15 +76,17 @@ class NystroemKoopKernelSequencer(nn.Module):
         self.input_length = input_length
         self.output_length = output_length
         self.num_steps = num_steps
+        #FIXME Remove num_steps, not accessed anywhere.
         self.num_nys_centers = num_nys_centers
         self.context_mode = context_mode
+        self.mask_version = mask_version
         self.use_nystroem_context_window = use_nystroem_context_window
         self.rng_seed = rng_seed
         self.rn_generator = torch.Generator()
         _ = self.rn_generator.manual_seed(self.rng_seed)
 
         self._mask_koopman_operator(mask_koopman_operator)
-        # self.global_koopman_operator = 
+        # self.global_koopman_operator =
         self._initialize_global_koopman_operator(
             self.num_nys_centers,
             self.input_length,
@@ -95,20 +98,21 @@ class NystroemKoopKernelSequencer(nn.Module):
             print("Masking has no effect for context_mode=no_context, last_context.")
         self.mask_koopman_operator = mask_koopman_operator
 
-    # def initialize_nystroem_kernels(self, data_set):
-    #     """Initialize the nystroem kernel matrix.
-
-    #     Args:
-    #     data_set: dataset to initialize the kernel matrix
-
-    #     Returns:
-    #     nystroem_matrix: nystroem kernel matrix
-    #     """
-    #     rand_indices = self._center_selection(data_set.shape[0], self.rn_generator)
-
-    #     data_set = torch.tensor(data_set, dtype=torch.float32).to(device)
-    #     nystroem_matrix = torch.mm(data_set, data_set.t())
-    #     return nystroem_matrix
+        mask = torch.ones(
+            (
+                self.num_nys_centers * self.input_length,
+                self.num_nys_centers * self.input_length,
+            ),
+            device=device,
+        )
+        for i in range(self.input_length):
+            for j in range(i + 1, self.input_length):
+                masked_block = torch.zeros((self.num_nys_centers, self.num_nys_centers))
+                mask[
+                    self.num_nys_centers * i : self.num_nys_centers * (i + 1),
+                    self.num_nys_centers * j : self.num_nys_centers * (j + 1),
+                ] = masked_block
+        self._mask = mask
 
     def _center_selection(
         self, num_pts: int, generator: torch.Generator | None = None
@@ -128,6 +132,11 @@ class NystroemKoopKernelSequencer(nn.Module):
     def _initialize_nystrom_data(self, tensor_context: TensorContextDataset):
         """First focus on initializing without data_loader object. Maybe need this for later.
 
+        FIXME Initialization probably needs to happen with ourput from 
+            standardized_batched_context_from_TCTracks, to be able to properly work with
+            output_length > 1 (see FIXME below). Initialization happens for example in
+            train_KKSeq2Seq() ~ line 407.
+        
         Args:
             tensor_context (_type_): _description_
         """
@@ -140,9 +149,8 @@ class NystroemKoopKernelSequencer(nn.Module):
         assert self.input_length + self.output_length == tensor_context.context_length
 
         tcnys_X = tensor_context_nys.lookback(self.input_length)
-        tcnys_Y = tensor_context_nys.lookback(
-            self.input_length, slide_by=1
-        )
+        #FIXME for output_length > 1, tcnys_Y might need to have an additional output_length axis.
+        tcnys_Y = tensor_context_nys.lookback(self.input_length, slide_by=1)
         # tcnys_X = tensor_context_nys.lookback(tensor_context.context_length - 1)
         # tcnys_Y = tensor_context_nys.lookback(
         #     tensor_context.context_length - 1, slide_by=1
@@ -182,30 +190,9 @@ class NystroemKoopKernelSequencer(nn.Module):
             # shape: (num_nys_centers, num_feats), (num_nys_centers, num_feats)
             # -> (num_nys_centers, num_nys_centers)
 
-
+    # TODO
     # def _initialize_nystrom_data_from_data_loader(self, data_loader):
     #     """First focus on initializing without data_loader object. Maybe need this for later.
-
-    #     Args:
-    #         data_loader (_type_): _description_
-    #     """
-    #     n_data = len(data_loader.dataset)
-    #     rand_indices = self._center_selection(n_data, self.rn_generator)
-
-    #     nystrom_data_X = np.array(
-    #         [data_loader.dataset[idx][0][0] for idx in rand_indices]
-    #     )
-    #     nystrom_data_Y = np.array(
-    #         [data_loader.dataset[idx][1][0] for idx in rand_indices]
-    #     )
-    #     self.nystrom_data_X = torch.tensor(nystrom_data_X, dtype=torch.float32).to(
-    #         device
-    #     )
-    #     # shape: (num_nys_centers, num_feats)
-    #     self.nystrom_data_Y = torch.tensor(nystrom_data_Y, dtype=torch.float32).to(
-    #         device
-    #     )
-    #     # shape: (num_nys_centers, num_feats)
 
     def _initialize_global_koopman_operator(
         self, num_nys_centers, input_length, context_mode
@@ -221,47 +208,47 @@ class NystroemKoopKernelSequencer(nn.Module):
             koopman_blocks = {}
         elif context_mode == "full_context":
             if self.mask_koopman_operator:
-                # global_koopman_operator = None
-                # global_koopman_operator = torch.zeros(
-                #     (num_nys_centers * input_length, num_nys_centers * input_length),
-                #     device=device,
-                #     dtype=torch.float32,
-                # )
 
-                #=========================================================================
+                if self.mask_version == 0:
+                    # ======================================================================
 
-                koopman_blocks = {}
-                for i in range(input_length):
-                    for j in range(i + 1):
-                        koopman_block = nn.Parameter(
-                            torch.empty(
-                                (num_nys_centers, num_nys_centers),
-                                device=device,
-                                dtype=torch.float32,
+                    global_koopman_operator = None
+                    koopman_blocks = {}
+                    for i in range(input_length):
+                        for j in range(i + 1):
+                            koopman_block = nn.Parameter(
+                                torch.empty(
+                                    (num_nys_centers, num_nys_centers),
+                                    device=device,
+                                    dtype=torch.float32,
+                                )
                             )
-                        )
-                        torch.nn.init.xavier_uniform_(
-                            koopman_block
-                        )  # or any other init method
-                        koopman_blocks[f"{i},{j}"] = koopman_block
-                        # global_koopman_operator[
-                        #     num_nys_centers * i : num_nys_centers * (i + 1),
-                        #     num_nys_centers * j : num_nys_centers * (j + 1),
-                        # ] = koopman_block
-                global_koopman_operator = None
-                # global_koopman_operator = torch.zeros(
-                #     (self.num_nys_centers * input_length, self.num_nys_centers * input_length),
-                #     device=device,
-                #     dtype=torch.float32,
-                # )
-                # for i in range(input_length):
-                #     for j in range(i + 1):
-                #         global_koopman_operator[
-                #             self.num_nys_centers * i : self.num_nys_centers * (i + 1),
-                #             self.num_nys_centers * j : self.num_nys_centers * (j + 1),
-                #         ] = koopman_blocks[f"{i},{j}"]
+                            torch.nn.init.xavier_uniform_(
+                                koopman_block
+                            )  # or any other init method
+                            koopman_blocks[f"{i},{j}"] = koopman_block
+                            # global_koopman_operator[
+                            #     num_nys_centers * i : num_nys_centers * (i + 1),
+                            #     num_nys_centers * j : num_nys_centers * (j + 1),
+                            # ] = koopman_block
 
-                #=========================================================================
+                    # ======================================================================
+                
+                else:
+
+                    global_koopman_operator = torch.zeros(
+                        (num_nys_centers * input_length, num_nys_centers * input_length),
+                        device=device,
+                        dtype=torch.float32,
+                    )
+                    torch.nn.init.xavier_uniform_(
+                        global_koopman_operator
+                    )  # or any other init method
+
+                    global_koopman_operator = nn.Parameter(global_koopman_operator * self._mask)
+                    koopman_blocks = {}
+
+                    # ======================================================================
 
                 # global_koopman_operator = torch.zeros(
                 #     (num_nys_centers * input_length, num_nys_centers * input_length),
@@ -272,29 +259,33 @@ class NystroemKoopKernelSequencer(nn.Module):
                 #     global_koopman_operator
                 # )  # or any other init method
 
-                # mask = torch.ones(global_koopman_operator.shape, dtype=torch.bool, device=device)
+                # mask = torch.ones(
+                #     global_koopman_operator.shape, dtype=torch.bool, device=device
+                # )
                 # for i in range(input_length):
-                #     for j in range(i+1, input_length):
-                #         masked_block = torch.zeros((num_nys_centers, num_nys_centers), dtype=torch.bool)
+                #     for j in range(i + 1, input_length):
+                #         masked_block = torch.zeros(
+                #             (num_nys_centers, num_nys_centers), dtype=torch.bool
+                #         )
                 #         mask[
                 #             num_nys_centers * i : num_nys_centers * (i + 1),
                 #             num_nys_centers * j : num_nys_centers * (j + 1),
                 #         ] = masked_block
 
-                # global_koopman_operator = masked_tensor(global_koopman_operator, mask, requires_grad=True)
-                # global_koopman_operator = nn.Parameter(
-                #     global_koopman_operator
+                # global_koopman_operator = masked_tensor(
+                #     global_koopman_operator, mask, requires_grad=True
                 # )
+                # global_koopman_operator = nn.Parameter(global_koopman_operator)
                 # koopman_blocks = {}
 
-                #=========================================================================
+                # ======================================================================
 
             else:
                 global_koopman_operator = nn.Parameter(
                     torch.empty(
                         (
-                            num_nys_centers * input_length,
-                            num_nys_centers * input_length,
+                            input_length * num_nys_centers,
+                            input_length * num_nys_centers,
                         ),
                         device=device,
                         dtype=torch.float32,
@@ -304,7 +295,7 @@ class NystroemKoopKernelSequencer(nn.Module):
         elif context_mode == "last_context":
             global_koopman_operator = nn.Parameter(
                 torch.empty(
-                    (num_nys_centers, num_nys_centers * input_length),
+                    (num_nys_centers, input_length * num_nys_centers),
                     device=device,
                     dtype=torch.float32,
                 )
@@ -314,35 +305,58 @@ class NystroemKoopKernelSequencer(nn.Module):
             raise Exception(f"{context_mode} is not a valid context_mode.")
 
         if not self.mask_koopman_operator:
-        # if global_koopman_operator is not None:
             torch.nn.init.xavier_uniform_(
                 global_koopman_operator
             )  # or any other init method
         self.global_koopman_operator = global_koopman_operator
-        self.koopman_blocks = nn.ParameterDict(
-            koopman_blocks
-        )
+        self.koopman_blocks = nn.ParameterDict(koopman_blocks)
 
     def _apply_Y_kernel(self, inps):
         if self.context_mode == "full_context":
+            # inps shape:
+            # output_length = 1: (batch_size, input_length, num_nys_centers)
+            # output_length > 1: 
+            #   (batch_size, input_length, num_nys_centers, output_length)
             if self.output_length == 1:
                 if self.use_nystroem_context_window:
                     outs = torch.einsum("lij,blj->bil", self.kernel_nysY_Y, inps)
-                    # shape: (input_length, num_nys_centers, num_nys_centers), (batch_size, input_length, num_nys_centers)
+                    # shape: (input_length, num_nys_centers, num_nys_centers),
+                    # (batch_size, input_length, num_nys_centers)
                     # -> (batch_size, num_nys_centers, input_length)
                 else:
                     outs = torch.einsum("ij,blj->bil", self.kernel_nysY_Y, inps)
-                    # shape: (num_nys_centers, num_nys_centers), (batch_size, input_length, num_nys_centers)
+                    # shape: (num_nys_centers, num_nys_centers),
+                    # (batch_size, input_length, num_nys_centers)
                     # -> (batch_size, num_nys_centers, input_length)
             else:
                 if self.use_nystroem_context_window:
                     outs = torch.einsum("lij,bljo->bilo", self.kernel_nysY_Y, inps)
-                    # shape: (input_length, num_nys_centers, num_nys_centers), (batch_size, input_length, num_nys_centers, output_length)
+                    # shape: (input_length, num_nys_centers, num_nys_centers),
+                    # (batch_size, input_length, num_nys_centers, output_length)
                     # -> (batch_size, num_nys_centers, input_length, output_length)
                 else:
                     outs = torch.einsum("ij,bljo->bilo", self.kernel_nysY_Y, inps)
-                    # shape: (num_nys_centers, num_nys_centers), (batch_size, input_length, num_nys_centers, output_length)
+                    # shape: (num_nys_centers, num_nys_centers),
+                    # (batch_size, input_length, num_nys_centers, output_length)
                     # -> (batch_size, num_nys_centers, input_length, output_length)
+        if self.context_mode == "last_context":
+            # inps shape:
+            # output_length = 1: (batch_size, num_nys_centers)
+            # output_length > 1: (batch_size, num_nys_centers, output_length)
+            if self.use_nystroem_context_window:
+                kernel_nysY_Y = self.kernel_nysY_Y[-1]
+            else:
+                kernel_nysY_Y = self.kernel_nysY_Y
+            if self.output_length == 1:
+                outs = torch.einsum("ij,bj->bi", kernel_nysY_Y, inps)
+                # shape: (num_nys_centers, num_nys_centers),
+                # (batch_size, num_nys_centers)
+                # -> (batch_size, num_nys_centers)
+            else:
+                outs = torch.einsum("ij,bjo->bio", kernel_nysY_Y, inps)
+                # shape: (num_nys_centers, num_nys_centers),
+                # (batch_size, num_nys_centers, output_length)
+                # -> (batch_size, num_nys_centers, output_length)
         return outs
 
     def _apply_nystroem_data_X(self, inps):
@@ -362,30 +376,49 @@ class NystroemKoopKernelSequencer(nn.Module):
             ) * self.num_nys_centers ** (-1 / 2)
             # shape: (input_length, num_nys_centers, num_feats), (input_length, batch_size, num_feats)
             # -> (input_length, num_nys_centers, batch_size)
-            kernel_nysX_X = kernel_nysX_X.transpose(0, 2)
+            kernel_nysX_X = torch.einsum("ijk->kij", kernel_nysX_X)
             # shape: (batch_size, input_length, num_nys_centers)
+
+            # kernel_nysX_X = kernel_nysX_X.transpose(0, 2)
+            # # shape: (batch_size, num_nys_centers, input_length)
+            # kernel_nysX_X = kernel_nysX_X.transpose(1, 2)
+            # # shape: (batch_size, input_length, num_nys_centers)
         else:
             kernel_nysX_X = self._kernel(
                 self.nystrom_data_X, inps
             ) * self.num_nys_centers ** (-1 / 2)
             # shape: (num_nys_centers, num_feats), (batch_size, input_length, num_feats)
             # -> (batch_size, num_nys_centers, input_length)
-
-        if self.context_mode == "full_context":
+            # TODO potentially can get rid of the transposition by commuting the
+            # arguments of self._kernel()
             kernel_nysX_X = kernel_nysX_X.transpose(1, 2)
             # shape: (batch_size, input_length, num_nys_centers)
+
+        if self.context_mode != "no_context":
             kernel_nysX_X = kernel_nysX_X.reshape(
                 shape=(batch_size, self.input_length * self.num_nys_centers)
             )
             # shape: (batch_size, input_length * num_nys_centers)
         return kernel_nysX_X
-    
+
     def _apply_nystroem_data_Y(self, inps):
-        if self.use_nystroem_context_window:
+        if self.context_mode == "full_context":
             # shape self.nystrom_data_X: (num_nys_centers, input_length, num_feats)
-            raise NotImplementedError("Not implemented yet.")
-        else:
-            if self.context_mode == "full_context":
+            # raise NotImplementedError("Not implemented yet.")
+            if self.use_nystroem_context_window:
+                # shape self.nystrom_data_Y: (num_nys_centers, input_length, num_feats)
+                if self.output_length == 1:
+                    outs = torch.einsum("jla,bjl->bla", self.nystrom_data_Y, inps)
+                    # shape: (num_nys_centers, input_length, num_feats),
+                    # (batch_size, num_nys_centers, input_length)
+                    # -> (batch_size, input_length, num_feats)
+                else:
+                    outs = torch.einsum("jla,bjlo->bloa", self.nystrom_data_Y, inps)
+                    # shape: (num_nys_centers, input_length, num_feats),
+                    # (batch_size, num_nys_centers, input_length, output_length)
+                    # -> (batch_size, input_length, output_length, num_feats)
+            else:
+                # shape self.nystrom_data_Y: (num_nys_centers, num_feats)
                 if self.output_length == 1:
                     outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, inps)
                     # shape: (num_nys_centers, num_feats),
@@ -396,6 +429,28 @@ class NystroemKoopKernelSequencer(nn.Module):
                     # shape: (num_nys_centers, num_feats),
                     # (batch_size, num_nys_centers, input_length, output_length)
                     # -> (batch_size, input_length, output_length, num_feats)
+        if self.context_mode == "last_context":
+            # shape inps:
+            #   output_length = 1: (batch_size, num_nys_centers)
+            #   output_length > 1: (batch_size, num_nys_centers, output_length)
+            # shape self.nystrom_data_X: (num_nys_centers, input_length, num_feats)
+            # raise NotImplementedError("Not implemented yet.")
+
+            if self.use_nystroem_context_window:
+                nystrom_data_Y = self.nystrom_data_Y[:, -1]
+            else:
+                nystrom_data_Y = self.nystrom_data_Y
+            # shape nystrom_data_Y: (num_nys_centers, num_feats)
+            if self.output_length == 1:
+                outs = torch.einsum("ja,bj->ba", nystrom_data_Y, inps)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers)
+                # -> (batch_size, num_feats)
+            else:
+                outs = torch.einsum("ja,bjo->boa", nystrom_data_Y, inps)
+                # shape: (num_nys_centers, num_feats),
+                # (batch_size, num_nys_centers, output_length)
+                # -> (batch_size, output_length, num_feats)
         return outs
 
     def forward(self, inps: torch.Tensor) -> torch.Tensor:
@@ -414,55 +469,56 @@ class NystroemKoopKernelSequencer(nn.Module):
 
         # TODO rename to kernel_nys_X_inps
         kernel_nysX_X = self._apply_nystroem_data_X(inps)
-        
-        # # not needed anymore -> replace by self.kernel_nysY_Y
-        # kernel_nysY_Y = self._kernel(
-        #     self.nystrom_data_Y, self.nystrom_data_Y
-        # ) * self.num_nys_centers ** (-1 / 2)
-        # # shape: (num_nys_centers, num_feats), (num_nys_centers, num_feats)
-        # # -> (num_nys_centers, num_nys_centers)
 
         if self.context_mode == "no_context":
+            # shape global_koopman_operator:
+            # (num_nys_centers, num_nys_centers)
+            # shape kernel_nysX_X: (batch_size, input_length, num_nys_centers)
+
+            if self.use_nystroem_context_window:
+                raise Exception("Not implemented. self._apply_nystroem_data_Y() needs to be used and adapted to the no_context case.")
             if self.output_length == 1:
                 outs = torch.einsum(
-                    "ki,ij,bjl->bkl",
+                    "ki,ij,blj->bkl",
                     self.kernel_nysY_Y,
                     self.global_koopman_operator,
                     kernel_nysX_X,
                 )
                 # shape: (num_nys_centers, num_nys_centers), (num_nys_centers, num_nys_centers),
-                # (batch_size, num_nys_centers, input_length)
+                # (batch_size, input_length, num_nys_centers)
                 # -> (batch_size, num_nys_centers, input_length)
                 outs = torch.einsum("ja,bjl->bla", self.nystrom_data_Y, outs)
                 # shape: (num_nys_centers, num_feats),
                 # (batch_size, num_nys_centers, input_length)
                 # -> (batch_size, input_length, num_feats)
+                
             else:
                 raise NotImplementedError("Not yet implemented.")
         elif self.context_mode == "full_context":
-            # moved to self._apply_nystroem_data_X()
-            # kernel_nysX_X = kernel_nysX_X.transpose(1, 2)
-            # # shape: (batch_size, input_length, num_nys_centers)
-            # kernel_nysX_X = kernel_nysX_X.reshape(
-            #     shape=(batch_size, self.input_length * self.num_nys_centers)
-            # )
-            # # shape: (batch_size, input_length * num_nys_centers)
-
+            # shape global_koopman_operator:
+            # (input_length * num_nys_centers, input_length * num_nys_centers)
+            # shape kernel_nysX_X: (batch_size, input_length * num_nys_centers)
 
             if self.mask_koopman_operator:
                 # global_koopman_operator = self.global_koopman_operator
-                global_koopman_operator = torch.zeros(
-                    (self.num_nys_centers * input_length, self.num_nys_centers * input_length),
-                    device=device,
-                    dtype=torch.float32,
-                )
-                for i in range(input_length):
-                    for j in range(i + 1):
-                        global_koopman_operator[
-                            self.num_nys_centers * i : self.num_nys_centers * (i + 1),
-                            self.num_nys_centers * j : self.num_nys_centers * (j + 1),
-                        ] = self.koopman_blocks[f"{i},{j}"]
-                
+                if self.mask_version == 0:
+                    global_koopman_operator = torch.zeros(
+                        (
+                            self.num_nys_centers * input_length,
+                            self.num_nys_centers * input_length,
+                        ),
+                        device=device,
+                        dtype=torch.float32,
+                    )
+                    for i in range(input_length):
+                        for j in range(i + 1):
+                            global_koopman_operator[
+                                self.num_nys_centers * i : self.num_nys_centers * (i + 1),
+                                self.num_nys_centers * j : self.num_nys_centers * (j + 1),
+                            ] = self.koopman_blocks[f"{i},{j}"]
+                else:
+                    global_koopman_operator = self.global_koopman_operator * self._mask
+
                 if self.output_length == 1:
                     outs = torch.einsum(
                         "ij,bj->bi", global_koopman_operator, kernel_nysX_X
@@ -471,6 +527,7 @@ class NystroemKoopKernelSequencer(nn.Module):
                     outs = outs.reshape(
                         shape=(batch_size, self.input_length, self.num_nys_centers)
                     )
+                    # shape: (batch_size, input_length, num_nys_centers)
                 else:
                     outs = torch.zeros(
                         size=(
@@ -494,6 +551,7 @@ class NystroemKoopKernelSequencer(nn.Module):
                             self.output_length,
                         )
                     )
+                    # shape: (batch_size, input_length, num_nys_centers, output_length)
             else:
                 if self.output_length == 1:
                     outs = torch.einsum(
@@ -503,6 +561,7 @@ class NystroemKoopKernelSequencer(nn.Module):
                     outs = outs.reshape(
                         shape=(batch_size, self.input_length, self.num_nys_centers)
                     )
+                    # shape: (batch_size, input_length, num_nys_centers)
                 else:
                     outs = torch.zeros(
                         size=(
@@ -515,7 +574,9 @@ class NystroemKoopKernelSequencer(nn.Module):
                     )
                     out = kernel_nysX_X
                     for idx in range(self.output_length):
-                        out = torch.einsum("ij,bj->bi", self.global_koopman_operator, out)
+                        out = torch.einsum(
+                            "ij,bj->bi", self.global_koopman_operator, out
+                        )
                         outs[:, :, idx] = out
                     # shape: (batch_size, input_length * num_nys_centers, output_length)
                     outs = outs.reshape(
@@ -526,51 +587,46 @@ class NystroemKoopKernelSequencer(nn.Module):
                             self.output_length,
                         )
                     )
+                    # shape: (batch_size, input_length, num_nys_centers, output_length)
 
             outs = self._apply_Y_kernel(outs)
             outs = self._apply_nystroem_data_Y(outs)
+            # shape (output_lengt = 1): (batch_size, input_length, num_feats)
+            # shape (output_lengt > 1): (batch_size, input_length, output_length, num_feats)
 
         elif self.context_mode == "last_context":
+            # shape global_koopman_operator:
+            # (num_nys_centers, input_length * num_nys_centers)
+            # shape kernel_nysX_X: (batch_size, input_length * num_nys_centers)
             if self.output_length == 1:
-                kernel_nysX_X = kernel_nysX_X.reshape(
-                    shape=(batch_size, self.num_nys_centers * self.input_length)
-                )
                 outs = torch.einsum(
                     "ij,bj->bi", self.global_koopman_operator, kernel_nysX_X
                 )
                 # shape: (batch_size, num_nys_centers)
-                outs = torch.einsum("ij,bj->bi", self.kernel_nysY_Y, outs)
-                # -> (batch_size, num_nys_centers)
-                outs = torch.einsum("ja,bj->ba", self.nystrom_data_Y, outs)
-                # shape: (num_nys_centers, num_feats),
-                # (batch_size, num_nys_centers)
-                # -> (batch_size, num_feats)
             else:
                 outs = torch.zeros(
                     size=(batch_size, self.num_nys_centers, self.output_length),
                     device=device,
                     dtype=torch.float32,
                 )
-                out = kernel_nysX_X
-                # shape: (batch_size, num_nys_centers, input_length)
+                out = kernel_nysX_X.reshape(shape=(batch_size, self.input_length, self.num_nys_centers))
+                # shape: (batch_size, input_length, num_nys_centers)
                 for idx in range(self.output_length):
                     out_flat = out.reshape(
-                        shape=(batch_size, self.num_nys_centers * self.input_length)
+                        shape=(batch_size, self.input_length * self.num_nys_centers)
                     )
                     next_out = torch.einsum(
                         "ij,bj->bi", self.global_koopman_operator, out_flat
                     )
                     # shape: (batch_size, num_nys_centers)
-                    out = torch.cat([out[:, :, 1:], next_out.unsqueeze(dim=2)], dim=2)
-                    # shape: (batch_size, num_nys_centers, input_length)
-                    outs[:, :, idx] = out[:, :, -1]
+                    out = torch.cat([out[:, 1:, :], next_out.unsqueeze(dim=1)], dim=1)
+                    # shape: (batch_size, input_length, num_nys_centers)
+                    outs[:, :, idx] = out[:, -1, :]
                 # shape: (batch_size, num_nys_centers, output_length)
-                outs = torch.einsum("ij,bjo->bio", self.kernel_nysY_Y, outs)
-                # -> (batch_size, num_nys_centers, output_length)
-                outs = torch.einsum("ja,bjo->boa", self.nystrom_data_Y, outs)
-                # shape: (num_nys_centers, num_feats),
-                # (batch_size, num_nys_centers, output_length)
-                # -> (batch_size, output_length, num_feats)
+            outs = self._apply_Y_kernel(outs)
+            outs = self._apply_nystroem_data_Y(outs)
+            # shape (output_lengt = 1): (batch_size, num_feats)
+            # shape (output_lengt > 1): (batch_size, output_length, num_feats)
 
         return outs
 

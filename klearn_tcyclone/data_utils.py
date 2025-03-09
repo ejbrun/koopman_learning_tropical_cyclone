@@ -554,6 +554,7 @@ def standardized_context_dataset_from_TCTracks(
         backend=backend,
         **backend_kw,
     )
+    # shape: (n_data, input_length + output_length, num_feats)
     return standardized_tensor_context
 
 
