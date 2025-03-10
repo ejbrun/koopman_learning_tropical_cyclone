@@ -62,9 +62,8 @@ flag_params = extend_by_default_flag_values(flag_params)
 flag_params["batch_size"] = 32
 flag_params["num_epochs"] = 10
 # flag_params["num_epochs"] = 100
-flag_params["train_output_length"] = 1
+flag_params["train_output_length"] = 2
 flag_params["test_output_length"] = flag_params["train_output_length"]
-flag_params["num_steps"] = 3
 flag_params["time_step_h"] = tc_tracks_time_step
 flag_params["basin"] = "NA"
 
@@ -164,21 +163,21 @@ for (
         tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
     )
 
-    tensor_context_train_standardized = standardized_context_dataset_from_TCTracks(
-        tc_tracks_train,
-        feature_list=feature_list,
-        scaler=scaler,
-        context_length=flag_params["context_length"],
-        time_lag=1,
-        fit=True,
-        periodic_shift=True,
-        basin=flag_params["basin"],
-        input_length=flag_params["input_length"],
-        output_length=flag_params["train_output_length"],
-    )
+    # tensor_context_train_standardized = standardized_context_dataset_from_TCTracks(
+    #     tc_tracks_train,
+    #     feature_list=feature_list,
+    #     scaler=scaler,
+    #     context_length=flag_params["context_length"],
+    #     time_lag=1,
+    #     fit=True,
+    #     periodic_shift=True,
+    #     basin=flag_params["basin"],
+    #     input_length=flag_params["input_length"],
+    #     output_length=flag_params["train_output_length"],
+    # )
 
-    koopkernelmodel._initialize_nystrom_data(tensor_context_train_standardized)
-    del tensor_context_train_standardized
+    # koopkernelmodel._initialize_nystrom_data(tensor_context_train_standardized)
+    # del tensor_context_train_standardized
 
     # parameter_list = list(koopkernelmodel.parameters())
 
@@ -247,6 +246,8 @@ for (
     del tc_tracks_train
     del tc_tracks_valid
     del tc_tracks_test
+
+    koopkernelmodel._initialize_nystrom_data_2(tensor_context_inps_train=tensor_context_inps_train, tensor_context_tgts_train=tensor_context_tgts_train)
 
     optimizer = torch.optim.Adam(
         koopkernelmodel.parameters(), lr=flag_params["learning_rate"]
