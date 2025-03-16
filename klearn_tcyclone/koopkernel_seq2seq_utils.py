@@ -347,6 +347,7 @@ def train_KKSeq2Seq(
     results_file_name: str,
     save_model: str = "best",
     split_valid_set: bool = True,
+    early_stopping: bool = False,
     backend: str = "auto",
     **backend_kw,
 ) -> tuple[NystroemKoopKernelSequencer, list[float]]:
@@ -373,6 +374,7 @@ def train_KKSeq2Seq(
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
+        early_stopping (bool): If to apply early stopping. Defaults to False.
         backend (str, optional): _description_. Defaults to "auto".
 
     Raises:
@@ -549,10 +551,11 @@ def train_KKSeq2Seq(
         )
 
         # train the model at least 60 epochs and do early stopping
-        if epoch > flag_params["min_epochs"] and np.mean(
-            all_eval_rmses[-10:]
-        ) > np.mean(all_eval_rmses[-20:-10]):
-            break
+        if early_stopping:
+            if epoch > flag_params["min_epochs"] and np.mean(
+                all_eval_rmses[-10:]
+            ) > np.mean(all_eval_rmses[-20:-10]):
+                break
 
         epoch_time = time() - start_time
         scheduler.step()
@@ -697,7 +700,8 @@ def train_koopkernel_seq2seq_model(
     log_file_handler: logging.FileHandler,
     results_dir: str,
     save_model: str = "best",
-) -> NystroemKoopKernelSequencer:
+    early_stopping: bool = False,
+) -> tuple[NystroemKoopKernelSequencer, list[float]]:
     """Train Koopman kernel sequence model.
 
     Args:
@@ -710,6 +714,7 @@ def train_koopkernel_seq2seq_model(
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
+        early_stopping (bool): If to apply early stopping. Defaults to False.
 
     Returns:
         NystroemKoopKernelSequencer: _description_
@@ -739,7 +744,7 @@ def train_koopkernel_seq2seq_model(
         use_nystroem_context_window=flag_params["use_nystroem_context_window"],
     )
 
-    model = train_KKSeq2Seq(
+    model, all_train_rmses = train_KKSeq2Seq(
         model=koopkernelmodel,
         eval_metric=eval_metric,
         tc_tracks=tc_tracks,
@@ -754,6 +759,7 @@ def train_koopkernel_seq2seq_model(
         flag_params=flag_params,
         results_file_name=results_file_name,
         save_model=save_model,
+        early_stopping = early_stopping,
     )
 
-    return model
+    return model, all_train_rmses

@@ -11,7 +11,6 @@ from torch.nn.modules.loss import _Loss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 # Define an abstract class
 class KoopmanKernelTorch(ABC):
     @abstractmethod

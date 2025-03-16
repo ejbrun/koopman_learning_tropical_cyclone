@@ -118,10 +118,6 @@ def get_model_name(flag_params: dict) -> str:
         str: _description_
     """
     if flag_params["model"] == "KNF":
-        encoder_hidden_dim = flag_params["hidden_dim"]
-        decoder_hidden_dim = flag_params["hidden_dim"]
-        encoder_num_layers = flag_params["num_layers"]
-        decoder_num_layers = flag_params["num_layers"]
         model_name = "seed{}_jumps{}_freq{}_poly{}_sin{}_exp{}_bz{}_lr{}_decay{}_dim{}_inp{}_pred{}_num{}_enchid{}_dechid{}_trm{}_conhid{}_enclys{}_declys{}_trmlys{}_conlys{}_latdim{}_RevIN{}_insnorm{}_regrank{}_globalK{}_contK{}".format(  # noqa: E501, UP032
             flag_params["seed"],
             flag_params["jumps"],
@@ -136,12 +132,12 @@ def get_model_name(flag_params: dict) -> str:
             flag_params["input_length"],
             flag_params["train_output_length"],
             flag_params["num_steps"],
-            encoder_hidden_dim,
-            decoder_hidden_dim,
+            flag_params["hidden_dim"],
+            flag_params["hidden_dim"],
             flag_params["transformer_dim"],
             flag_params["control_hidden_dim"],
-            encoder_num_layers,
-            decoder_num_layers,
+            flag_params["num_layers"],
+            flag_params["num_layers"],
             flag_params["transformer_num_layers"],
             flag_params["control_num_layers"],
             flag_params["latent_dim"],

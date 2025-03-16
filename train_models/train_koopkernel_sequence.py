@@ -34,10 +34,22 @@ feature_list = [
 
 
 # Set training settings
+# training_settings_full = {
+#     "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
+#     "koopman_kernel_num_centers": [2000],
+#     "context_mode": ["full_context", "last_context"],
+#     # "context_mode": ["no_context", "full_context", "last_context"],
+#     "mask_koopman_operator": [True, False],
+#     "mask_version": [1],
+#     # "mask_version": [0, 1],
+#     "use_nystroem_context_window": [False, True],
+#     "output_length": [1],
+# }
+# selection 1
 training_settings = {
     "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
-    "koopman_kernel_num_centers": [1000],
-    "context_mode": ["full_context", "last_context"],
+    "koopman_kernel_num_centers": [2000],
+    "context_mode": ["full_context"],
     # "context_mode": ["no_context", "full_context", "last_context"],
     "mask_koopman_operator": [True, False],
     "mask_version": [1],
@@ -45,6 +57,7 @@ training_settings = {
     "use_nystroem_context_window": [False, True],
     "output_length": [1],
 }
+
 # koopman_kernel_length_scale_arr = [0.16, 0.18, 0.2, 0.22, 0.24]
 # koopman_kernel_length_scale_arr = [0.06, 0.08, 0.1, 0.12, 0.14]
 # koopman_kernel_length_scale_arr = [1e-2, 1e-1, 1e0, 1e1]
@@ -158,7 +171,6 @@ for model_str in model_strings:
     # )
     # logger = logging.getLogger(flag_params["model"] + "_logger")
 
-    logger.info(flag_params)
 
     for (
         koopman_kernel_length_scale,
@@ -183,17 +195,17 @@ for model_str in model_strings:
             use_nystroem_context_window,
             output_length,
         )
-        if not mask_koopman_operator:
-            if mask_version == 1:
-                print("Skip iteration.")
-                continue
+        # if not mask_koopman_operator:
+        #     if mask_version == 0:
+        #         print("Skip iteration.")
+        #         continue
         if context_mode == "last_context":
             if mask_koopman_operator:
                 print("Skip iteration.")
                 continue
-            if mask_version == 1:
-                print("Skip iteration.")
-                continue
+            # if mask_version == 0:
+            #     print("Skip iteration.")
+            #     continue
 
         flag_params["train_output_length"] = output_length
         flag_params["test_output_length"] = flag_params["train_output_length"]
@@ -226,7 +238,7 @@ for model_str in model_strings:
 
         logger.info(flag_params)
 
-        model_koopkernelseq = train_koopkernel_seq2seq_model(
+        _, _ = train_koopkernel_seq2seq_model(
             tc_tracks,
             feature_list,
             flag_params,
