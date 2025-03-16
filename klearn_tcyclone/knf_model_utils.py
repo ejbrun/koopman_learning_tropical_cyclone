@@ -4,6 +4,7 @@ import copy
 from xarray import Dataset
 import os
 import time
+import logging
 
 import numpy as np
 import torch
@@ -22,6 +23,9 @@ from klearn_tcyclone.KNF.modules.train_utils import (
 )
 from klearn_tcyclone.knf_data_utils import TCTrackDataset
 from klearn_tcyclone.models_utils import get_model_name
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -56,10 +60,11 @@ def train_KNF_model(
     tc_tracks_test: TCTracks | list[Dataset],
     feature_list: list,
     flag_params: dict,
-    logger,
+    log_file_handler: logging.FileHandler,
     results_dir: str,
     save_model: str = "best",
-) -> Koopman:
+    early_stopping: bool = False,
+) -> tuple[Koopman, list[float]]:
     """Train KNF model.
 
     Args:
@@ -67,11 +72,12 @@ def train_KNF_model(
         tc_tracks_test (TCTracks | list[Dataset]): _description_
         feature_list (list): _description_
         flag_params (dict): _description_
-        logger (_type_): _description_
+        log_file_handler (_type_): _description_
         results_dir (str): _description_
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
+        early_stopping (bool): If to apply early stopping. Defaults to False.
 
     Raises:
         Exception: _description_
@@ -80,6 +86,8 @@ def train_KNF_model(
     Returns:
         Koopman: _description_
     """
+    logger.addHandler(log_file_handler)
+
     encoder_hidden_dim = flag_params["hidden_dim"]
     decoder_hidden_dim = flag_params["hidden_dim"]
     encoder_num_layers = flag_params["num_layers"]
@@ -169,67 +177,67 @@ def train_KNF_model(
 
     results_file_name = os.path.join(results_dir, model_name)
 
-    if os.path.exists(results_file_name + ".pth"):
-        model, last_epoch, learning_rate = torch.load(results_file_name + ".pth")
-        logger.info("Resume Training")
-        logger.info(f"last_epoch: {last_epoch}, learning_rate: {learning_rate}")
-    else:
-        last_epoch = 0
-        # os.makedirs(results_dir, exist_ok=True)
-        model = Koopman(
-            # number of steps of historical observations encoded at every step
-            input_dim=flag_params["input_dim"],
-            # input length of ts
-            input_length=flag_params["input_length"],
-            # number of output features
-            output_dim=output_dim,
-            # number of prediction steps every forward pass
-            num_steps=flag_params["num_steps"],
-            # hidden dimension of encoder
-            encoder_hidden_dim=encoder_hidden_dim,
-            # hidden dimension of decoder
-            decoder_hidden_dim=decoder_hidden_dim,
-            # number of layers in the encoder
-            encoder_num_layers=encoder_num_layers,
-            # number of layers in the decoder
-            decoder_num_layers=decoder_num_layers,
-            # number of feature
-            num_feats=num_feats,
-            # dimension of finite koopman space
-            latent_dim=flag_params["latent_dim"],
-            # whether to learn a global operator shared across all time series
-            add_global_operator=flag_params["add_global_operator"],
-            # whether to use a feedback module
-            add_control=flag_params["add_control"],
-            # hidden dim in the control module
-            control_hidden_dim=flag_params["control_hidden_dim"],
-            # number of layers in the control module
-            use_revin=flag_params["use_revin"],
-            # whether to use reversible normalization
-            control_num_layers=flag_params["control_num_layers"],
-            # whether to use instance normalization on hidden states
-            use_instancenorm=flag_params["use_instancenorm"],
-            # Regularize rank.
-            regularize_rank=flag_params["regularize_rank"],
-            # number of pairs of sine and cosine measurement functions
-            num_sins=flag_params["num_sins"],
-            # the highest order of polynomial functions
-            num_poly=flag_params["num_poly"],
-            # number of exponential functions
-            num_exp=flag_params["num_exp"],
-            # Number of the head the transformer encoder
-            num_heads=flag_params["num_heads"],
-            # hidden dimension of tranformer encoder
-            transformer_dim=flag_params["transformer_dim"],
-            # number of layers in the transformer encoder
-            transformer_num_layers=flag_params["transformer_num_layers"],
-            # dropout rate of MLP modules
-            dropout_rate=flag_params["dropout_rate"],
-            # global_local_combination
-            global_local_combination=flag_params["global_local_combination"],
-        ).to(device)
+    # if os.path.exists(results_file_name + ".pth"):
+    #     model, last_epoch, learning_rate = torch.load(results_file_name + ".pth")
+    #     logger.info("Resume Training")
+    #     logger.info(f"last_epoch: {last_epoch}, learning_rate: {learning_rate}")
+    # else:
+    last_epoch = 0
+    # os.makedirs(results_dir, exist_ok=True)
+    model = Koopman(
+        # number of steps of historical observations encoded at every step
+        input_dim=flag_params["input_dim"],
+        # input length of ts
+        input_length=flag_params["input_length"],
+        # number of output features
+        output_dim=output_dim,
+        # number of prediction steps every forward pass
+        num_steps=flag_params["num_steps"],
+        # hidden dimension of encoder
+        encoder_hidden_dim=encoder_hidden_dim,
+        # hidden dimension of decoder
+        decoder_hidden_dim=decoder_hidden_dim,
+        # number of layers in the encoder
+        encoder_num_layers=encoder_num_layers,
+        # number of layers in the decoder
+        decoder_num_layers=decoder_num_layers,
+        # number of feature
+        num_feats=num_feats,
+        # dimension of finite koopman space
+        latent_dim=flag_params["latent_dim"],
+        # whether to learn a global operator shared across all time series
+        add_global_operator=flag_params["add_global_operator"],
+        # whether to use a feedback module
+        add_control=flag_params["add_control"],
+        # hidden dim in the control module
+        control_hidden_dim=flag_params["control_hidden_dim"],
+        # number of layers in the control module
+        use_revin=flag_params["use_revin"],
+        # whether to use reversible normalization
+        control_num_layers=flag_params["control_num_layers"],
+        # whether to use instance normalization on hidden states
+        use_instancenorm=flag_params["use_instancenorm"],
+        # Regularize rank.
+        regularize_rank=flag_params["regularize_rank"],
+        # number of pairs of sine and cosine measurement functions
+        num_sins=flag_params["num_sins"],
+        # the highest order of polynomial functions
+        num_poly=flag_params["num_poly"],
+        # number of exponential functions
+        num_exp=flag_params["num_exp"],
+        # Number of the head the transformer encoder
+        num_heads=flag_params["num_heads"],
+        # hidden dimension of tranformer encoder
+        transformer_dim=flag_params["transformer_dim"],
+        # number of layers in the transformer encoder
+        transformer_num_layers=flag_params["transformer_num_layers"],
+        # dropout rate of MLP modules
+        dropout_rate=flag_params["dropout_rate"],
+        # global_local_combination
+        global_local_combination=flag_params["global_local_combination"],
+    ).to(device)
 
-        logger.info("New model")
+    # logger.info("New model")
     logger.info(
         f"number of params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}",
         # sum(p.numel() for p in model.parameters() if p.requires_grad),
@@ -246,6 +254,7 @@ def train_KNF_model(
     best_eval_rmse = 1e6
 
     logger.info("start training")
+    training_time_start = time.time()
     for epoch in range(last_epoch, flag_params["num_epochs"]):
         start_time = time.time()
 
@@ -297,10 +306,11 @@ def train_KNF_model(
         )
 
         # train the model at least 60 epochs and do early stopping
-        if epoch > flag_params["min_epochs"] and np.mean(
-            all_eval_rmses[-10:]
-        ) > np.mean(all_eval_rmses[-20:-10]):
-            break
+        if early_stopping:
+            if epoch > flag_params["min_epochs"] and np.mean(
+                all_eval_rmses[-10:]
+            ) > np.mean(all_eval_rmses[-20:-10]):
+                break
 
         epoch_time = time.time() - start_time
         scheduler.step()
@@ -309,6 +319,8 @@ def train_KNF_model(
                 epoch + 1, epoch_time / 60, train_rmse, eval_rmse
             )
         )
+
+    training_runtime = time.time() - training_time_start
 
     logger.info("Evaluate test metric.")
     _, test_preds, test_tgts = eval_epoch_koopman(test_loader, best_model, loss_fun)
@@ -319,6 +331,7 @@ def train_KNF_model(
             "eval_score": eval_metric(test_preds, test_tgts),
             "train_rmses": all_train_rmses,
             "eval_rmses": all_eval_rmses,
+            "training_runtime": training_runtime,
         },
         os.path.join(results_dir, "test_" + model_name + ".pt"),
     )

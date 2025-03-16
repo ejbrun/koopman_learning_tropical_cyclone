@@ -78,7 +78,6 @@ def main(argv):
     feature_list = ["lon", "lat", "max_sustained_wind"]
     # feature_list = ["lon", "lat", "max_sustained_wind", "central_pressure"]
 
-    # these are not contained as flags
     encoder_hidden_dim = flag_params["hidden_dim"]
     decoder_hidden_dim = flag_params["hidden_dim"]
     encoder_num_layers = flag_params["num_layers"]

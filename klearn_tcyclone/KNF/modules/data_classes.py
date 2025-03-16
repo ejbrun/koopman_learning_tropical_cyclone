@@ -20,7 +20,6 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 class CustomDataset(torch.utils.data.Dataset):
     """Dataset class for M4 mini dataset or new dataset."""
 

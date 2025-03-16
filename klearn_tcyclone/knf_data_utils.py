@@ -14,8 +14,6 @@ from klearn_tcyclone.data_utils import (
     standardize_time_series_list,
 )
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class TCTrackDataset(torch.utils.data.Dataset):
     """Dataset class for NBA player trajectory data.
