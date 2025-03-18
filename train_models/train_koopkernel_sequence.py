@@ -34,22 +34,11 @@ feature_list = [
 
 
 # Set training settings
-# training_settings_full = {
-#     "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
-#     "koopman_kernel_num_centers": [2000],
-#     "context_mode": ["full_context", "last_context"],
-#     # "context_mode": ["no_context", "full_context", "last_context"],
-#     "mask_koopman_operator": [True, False],
-#     "mask_version": [1],
-#     # "mask_version": [0, 1],
-#     "use_nystroem_context_window": [False, True],
-#     "output_length": [1],
-# }
-# selection 1
 training_settings = {
-    "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
-    "koopman_kernel_num_centers": [2000],
-    "context_mode": ["full_context"],
+    # "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
+    "koopman_kernel_length_scale": [0.16, 0.18, 0.20, 0.22, 0.24],
+    "koopman_kernel_num_centers": [1000],
+    "context_mode": ["full_context", "last_context"],
     # "context_mode": ["no_context", "full_context", "last_context"],
     "mask_koopman_operator": [True, False],
     "mask_version": [1],
