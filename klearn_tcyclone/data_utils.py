@@ -242,7 +242,7 @@ def linear_transform(
 
 
 class LinearScalerError(Exception):
-    """A custom exception used to report errors in use of Timer class"""
+    """A custom exception used to report errors in use of Timer class."""
 
 
 class LinearScaler:
