@@ -103,21 +103,19 @@ The plot shows the eigenfunction coordinates, embedded into a two-dimensional fe
 The identified nonlinear features are sufficient to discriminate the basins reasonably well and can be used, e.g., for classification of new tropical cyclone tracks.
 
 
-## Kernel based seq2seq architecture
+## Koopman Kernel Sequencer (kernel-based sequence model architecture)
 
 [see `examples/koopman_seq2seq_kernel.ipynb`, work in progress]
 
 The [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) is a deep learning architecture inspired by the Koopman operator framework. However, there are some parts of the architecture that are not very well grounded in Koopman operator theory. An additional downside of the approach are potentially unsuitable observable functions (which are hard-coded in the architecture).
 
-To improve upon the Koopman Neural Forecaster, I develop a deep learning architecture that more directly combines Koopman kernel methods with a seq2seq architecture. Using kernels alleviates the problem of observable selection. However, kernels usually require to read in and process the full dataset, which is exactly what you do not want to do in seq2seq models.
+To improve upon the Koopman Neural Forecaster, I develop a deep learning architecture that more directly combines Koopman kernel methods with a seq2seq architecture. Using kernels alleviates the problem of observable selection. However, kernels usually require to read in and process the full dataset, which is exactly what you do not want to do in seq2seq models. The implementation is using Nystroem kernel techniques.
 
-Development in `examples/koopman_seq2seq_kernel.ipynb`.
+Below, evaluation RMSE are compared for the KNF and the Koopman Kernel Sequencer.
 
-Preliminary results: Implementation of the seq2seq model based on the Nystroem kernel idea. As a first test, I compare three different implementations how the information from the context windows is used for the next-step-predictions (`no_context`, `full_context`, `last_context`). Results (MSE error versus training epochs) are below, the option `no_context` preforms bad, the other two options are comparable and achieve reasonably low MSE errors on the training data set.
+![KNF vs KoopKernelSequencer](./plots/scripts/knf_vs_KoopKernelSequencer.png)
 
-![Koopman eigenfunction analysis](./plots/koopman_seq2seq/context_mode_comparison.png)
-
-
+Note that there are several architectural hyperparameter for ther Koopman Kernel Sequencer. One is the `context_mode`, which controls whether the next time step is predicted for each time step in the context window (`full_context`), or only for the last time step (`last_context`, orange line). The former (blue line) achieves lower RMSE values, however the training is more expensive, as can be seen from the training runtime reported in the legend. Both version of the Koopman Kernel Sequencer outperform KNF (green line) both in terms of RMSE and in terms of training runtime.
 
 
 ## Koopman Neural Forecaster:

@@ -31,7 +31,8 @@ feature_list = [
 
 # Set training settings
 training_settings = {
-    "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
+    # "koopman_kernel_length_scale": [0.06, 0.08, 0.1, 0.12, 0.14],
+    "koopman_kernel_length_scale": [0.16, 0.18, 0.20, 0.22, 0.24],
     "koopman_kernel_num_centers": [1000],
     "context_mode": ["full_context", "last_context"],
     # "context_mode": ["no_context", "full_context", "last_context"],
@@ -109,7 +110,7 @@ for model_str in model_strings:
             flag_params["time_step_h"],
         ),
         flag_params["model"],
-        "parameter_search",
+        "parameter_search_lls",
     )
 
     for (
@@ -194,10 +195,9 @@ for model_str in model_strings:
         )
 
 
-
 flag_params["model"] = "KNF"
 model_name = get_model_name(flag_params)
-time_stamp = "2025-03-12-08-14-41"
+time_stamp = "2025-03-19-18-11-38"
 results_dir = os.path.join(
     current_file_dir_path,
     "../../train_models/training_results",
@@ -228,9 +228,8 @@ res_dict_knf = torch.load(
 )
 
 
-
 plot_settings = {
-    "koopman_kernel_length_scale": [0.14],
+    "koopman_kernel_length_scale": [0.24],
     "koopman_kernel_num_centers": [1000],
     "context_mode": ["full_context", "last_context"],
     "mask_koopman_operator": [False],
@@ -250,7 +249,7 @@ nrows = len(
 )
 
 fig, ax = plt.subplots(nrows=1, ncols=1, layout="constrained")
-fig.set_size_inches(8, 5)
+fig.set_size_inches(9, 4)
 
 koopman_kernel_num_centers = plot_settings["koopman_kernel_num_centers"][0]
 mask_version = plot_settings["mask_version"][0]
@@ -274,8 +273,19 @@ y = res_dict[conf]["eval_rmses"]
 ymin = np.min(y)
 x = range(len(y))
 ax.plot(
-    x, y, color=f"C{0}", label=f"KKS, CM={context_mode}, ymin={ymin:.3f}"
+    x,
+    y,
+    color=f"C{0}",
+    label=f"KoopKernelSeq, context mode: {context_mode}, training time={res_dict[conf]['training_runtime']:.0f} s",
+    # label=f"KoopKernelSeq, context mode: {context_mode}, ymin={ymin:.3f}, rt={res_dict[conf]['training_runtime']:.2f}",
 )
+# y = res_dict[conf]["train_rmses"]
+# ax.plot(
+#     x,
+#     y,
+#     color=f"C{0}",
+#     linestyle="dashed",
+# )
 
 context_mode = plot_settings["context_mode"][1]
 conf = (
@@ -291,19 +301,45 @@ y = res_dict[conf]["eval_rmses"]
 ymin = np.min(y)
 x = range(len(y))
 ax.plot(
-    x, y, color=f"C{1}", label=f"KKS, CM={context_mode}, ymin={ymin:.3f}"
+    x,
+    y,
+    color=f"C{1}",
+    label=f"KoopKernelSeq, context mode: {context_mode}, training time={res_dict[conf]['training_runtime']:.0f} s",
+    # label=f"KKS, CM={context_mode}, ymin={ymin:.3f}, rt={res_dict[conf]['training_runtime']:.2f}",
 )
+# y = res_dict[conf]["train_rmses"]
+# ax.plot(
+#     x,
+#     y,
+#     color=f"C{1}",
+#     linestyle="dashed",
+# )
 
 
 y = res_dict_knf["eval_rmses"]
 ymin = np.min(y)
 x = range(len(y))
-ax.plot(x, y, color=f"C{2}", label=f"KNF, ymin={ymin:.3f}")
+ax.plot(
+    x,
+    y,
+    color=f"C{2}",
+    label=f"KNF, training time={res_dict_knf['training_runtime']:.0f} s",
+    # label=f"KNF, ymin={ymin:.3f}, rt={res_dict_knf['training_runtime']:.2f}",
+)
+# y = res_dict_knf["train_rmses"]
+# ax.plot(
+#     x,
+#     y,
+#     color=f"C{2}",
+#     linestyle="dashed",
+# )
 
-ax.set_ylim(6e-2, 1e0)
+ax.set_xlabel("Epochs")
+ax.set_ylabel("Evaluation RMSE")
+ax.set_ylim(3e-2, 5e0)
 ax.set_yscale("log")
+ax.grid()
 ax.legend()
 
 
-
-fig.savefig("knf_vs_KoopKernelSequencer.pdf")
+fig.savefig("knf_vs_KoopKernelSequencer.png")

@@ -98,8 +98,7 @@ for model_str in model_strings:
     print()
 
     flag_params["model"] = model_str
-
-    time_stamp = "2025-03-16-18-24-45"
+    
     results_dir = os.path.join(
         current_file_dir_path,
         "../../train_models/training_results",
@@ -111,7 +110,7 @@ for model_str in model_strings:
             flag_params["time_step_h"],
         ),
         flag_params["model"],
-        time_stamp,
+        "parameter_search_lls",
     )
 
     for (
