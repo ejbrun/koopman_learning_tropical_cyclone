@@ -38,6 +38,12 @@ With activated venv, navigate to the root of the climada_python repository and r
 ```
 pip install -e .
 ```
+Similar, navigate to the root folder of the koopkernel_sequencer repository and run
+```
+pip install -e .
+```
+You can also add the following config setting `pip install -e . --config-settings editable_mode=strict` to make sure that pylance recognizes the package.
+
 After this, navigate back to the root of this project and run
 ```
 pip install -e .
