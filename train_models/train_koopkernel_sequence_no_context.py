@@ -3,14 +3,13 @@
 import logging
 import os
 import random
-
-from datetime import datetime
 import time
+from datetime import datetime
 
 import numpy as np
 
 from klearn_tcyclone.climada.utils import get_TCTrack_dict
-from klearn_tcyclone.koopkernel_seq2seq_utils import (
+from klearn_tcyclone.koopkernel_sequencer_utils import (
     train_koopkernel_seq2seq_model,
 )
 from klearn_tcyclone.training_utils.training_utils import (
@@ -59,7 +58,7 @@ flag_params["num_epochs"] = 100
 flag_params["train_output_length"] = 1
 flag_params["test_output_length"] = flag_params["train_output_length"]
 if flag_params["context_mode"] == "no_context":
-    flag_params["input_length"] = 4 # small input_length for context_mode = no_context
+    flag_params["input_length"] = 4  # small input_length for context_mode = no_context
     flag_params["input_dim"] = 1
 else:
     flag_params["input_length"] = 12
@@ -72,10 +71,10 @@ flag_params["time_step_h"] = tc_tracks_time_step
 flag_params["basin"] = "NA"
 
 
-
-
-
-if flag_params["context_length"] != flag_params["input_length"] + flag_params["train_output_length"]:
+if (
+    flag_params["context_length"]
+    != flag_params["input_length"] + flag_params["train_output_length"]
+):
     raise Exception("context_length must be input_length + train_output_length")
 if flag_params["input_length"] % flag_params["input_dim"] != 0:
     raise Exception("input_length must be divisible by input_dim")

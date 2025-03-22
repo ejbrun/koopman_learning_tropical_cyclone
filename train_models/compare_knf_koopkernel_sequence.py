@@ -5,20 +5,17 @@ import os
 import random
 
 import numpy as np
-
 from sklearn.model_selection import train_test_split
 
 from klearn_tcyclone.climada.tc_tracks_tools import BASINS_SELECTION
 from klearn_tcyclone.climada.utils import get_TCTrack_dict
 from klearn_tcyclone.knf_model_utils import train_KNF_model
-from klearn_tcyclone.koopkernel_seq2seq_utils import (
+from klearn_tcyclone.koopkernel_sequencer_utils import (
     train_koopkernel_seq2seq_model,
 )
 from klearn_tcyclone.training_utils.training_utils import (
     extend_by_default_flag_values,
 )
-
-
 
 time_lag = 1
 basins = BASINS_SELECTION
@@ -126,9 +123,7 @@ for model_str in ["KNF", "koopkernelseq"]:
     logger = logging.getLogger(flag_params["model"] + "_logger")
     logger.info(flag_params)
 
-
     if flag_params["model"] == "KNF":
-
         tc_tracks_train, tc_tracks_test = train_test_split(
             tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
         )
@@ -140,7 +135,6 @@ for model_str in ["KNF", "koopkernelseq"]:
             logger=logger,
             results_dir=results_dir,
         )
-
 
     elif flag_params["model"] == "koopkernelseq":
         context_mode = "last_context"

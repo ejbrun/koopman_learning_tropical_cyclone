@@ -9,21 +9,20 @@ from itertools import product
 
 import numpy as np
 import torch
+from kkseq.koopkernel_sequencer import (
+    KoopKernelLoss,
+    NystroemKoopKernelSequencer,
+    RBFKernel,
+)
+from kkseq.koopkernel_sequencer_utils import eval_one_epoch, train_one_epoch
 from sklearn.model_selection import train_test_split
 
 from klearn_tcyclone.data_utils import (
     LinearScaler,
     standardized_context_dataset_from_TCTracks,
 )
-from klearn_tcyclone.koopkernel_seq2seq import (
-    KoopKernelLoss,
-    NystroemKoopKernelSequencer,
-    RBFKernel,
-)
-from klearn_tcyclone.koopkernel_seq2seq_utils import (
-    eval_one_epoch,
+from klearn_tcyclone.koopkernel_sequencer_utils import (
     standardized_batched_context_from_TCTracks,
-    train_one_epoch,
 )
 from klearn_tcyclone.training_utils.training_utils import (
     extend_by_default_flag_values,
@@ -247,7 +246,10 @@ for (
     del tc_tracks_valid
     del tc_tracks_test
 
-    koopkernelmodel._initialize_nystrom_data_2(tensor_context_inps_train=tensor_context_inps_train, tensor_context_tgts_train=tensor_context_tgts_train)
+    koopkernelmodel._initialize_nystrom_data_2(
+        tensor_context_inps_train=tensor_context_inps_train,
+        tensor_context_tgts_train=tensor_context_tgts_train,
+    )
 
     optimizer = torch.optim.Adam(
         koopkernelmodel.parameters(), lr=flag_params["learning_rate"]

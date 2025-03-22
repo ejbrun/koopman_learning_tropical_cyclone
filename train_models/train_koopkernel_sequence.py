@@ -10,7 +10,7 @@ from itertools import product
 import numpy as np
 
 from klearn_tcyclone.climada.utils import get_TCTrack_dict
-from klearn_tcyclone.koopkernel_seq2seq_utils import (
+from klearn_tcyclone.koopkernel_sequencer_utils import (
     train_koopkernel_seq2seq_model,
 )
 from klearn_tcyclone.training_utils.training_utils import (
@@ -70,12 +70,9 @@ flag_params["batch_size"] = 32
 flag_params["num_epochs"] = 100
 
 flag_params["num_steps"] = 1
-#FIXME Remove num_steps, not accessed for the KooplearnSequencer.
+# FIXME Remove num_steps, not accessed for the KooplearnSequencer.
 flag_params["time_step_h"] = tc_tracks_time_step
 flag_params["basin"] = "NA"
-
-
-
 
 
 random.seed(flag_params["seed"])  # python random generator
@@ -160,7 +157,6 @@ for model_str in model_strings:
     # )
     # logger = logging.getLogger(flag_params["model"] + "_logger")
 
-
     for (
         koopman_kernel_length_scale,
         koopman_kernel_num_centers,
@@ -170,7 +166,6 @@ for model_str in model_strings:
         use_nystroem_context_window,
         output_length,
     ) in product(*training_settings.values()):
-
         print()
         print()
         print("=============================================================")
@@ -222,8 +217,6 @@ for model_str in model_strings:
         )
         if flag_params["input_length"] % flag_params["input_dim"] != 0:
             raise Exception("input_length must be divisible by input_dim")
-
-
 
         logger.info(flag_params)
 
