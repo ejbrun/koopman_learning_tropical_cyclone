@@ -2,9 +2,7 @@
 
 import os
 import random
-import time
 from matplotlib import pyplot as plt
-from datetime import datetime
 from itertools import product
 
 import numpy as np
@@ -342,4 +340,4 @@ ax.grid()
 ax.legend()
 
 
-fig.savefig("knf_vs_KoopKernelSequencer.png")
+fig.savefig("knf_vs_KoopKernelSequencer.pdf")
