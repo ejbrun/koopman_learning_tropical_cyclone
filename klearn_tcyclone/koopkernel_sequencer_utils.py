@@ -124,11 +124,10 @@ def train_KKSeq2Seq(
     feature_list,
     scaler: StandardScaler | MinMaxScaler | LinearScaler,
     basin: str,
-    log_file_handler: logging.FileHandler,
-    results_dir: str,
-    model_name: str,
     flag_params: dict,
-    results_file_name: str,
+    log_file_handler: logging.FileHandler | None = None,
+    results_dir: str | None = None,
+    model_name: str | None = None,
     save_model: str = "best",
     split_valid_set: bool = True,
     early_stopping: bool = False,
@@ -154,7 +153,6 @@ def train_KKSeq2Seq(
         results_dir (str): _description_
         model_name (str): _description_
         flag_params (dict): _description_
-        results_file_name (str): _description_
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
@@ -167,7 +165,10 @@ def train_KKSeq2Seq(
     Returns:
         NystroemKoopKernelSequencer: _description_
     """
-    logger.addHandler(log_file_handler)
+    if model_name is None:
+        model_name = "default_model"
+    if log_file_handler is not None:
+        logger.addHandler(log_file_handler)
 
     tc_tracks_train, tc_tracks_test = train_test_split(
         tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
@@ -295,19 +296,19 @@ def train_KKSeq2Seq(
         )
 
         print("eval comparison", eval_rmse, best_eval_rmse)
-        if save_model == "all":
-            torch.save(
-                [model, epoch, optimizer.param_groups[0]["lr"]],
-                results_file_name + f"_epoch{epoch}" + ".pth",
-            )
-
         if eval_rmse < best_eval_rmse:
             best_eval_rmse = eval_rmse
             best_model = model
+        if results_dir is not None:
+            if save_model == "all":
+                torch.save(
+                    [model, epoch, optimizer.param_groups[0]["lr"]],
+                    os.path.join(results_dir, model_name + f"_epoch{epoch}" + ".pth"),
+                )
             if save_model == "best":
                 torch.save(
                     [best_model, epoch, optimizer.param_groups[0]["lr"]],
-                    results_file_name + "_best.pth",
+                    os.path.join(results_dir, model_name + "_best.pth"),
                 )
 
         all_train_rmses.append(train_rmse)
@@ -323,17 +324,17 @@ def train_KKSeq2Seq(
             tensor_context_inps_test,
             tensor_context_tgts_test,
         )
-        torch.save(
-            {
-                "test_preds": test_preds,
-                "test_tgts": test_tgts,
-                "eval_score": eval_metric(
-                    test_preds, test_tgts
-                ),  # FIXME eval_metric() here is a tuple of four elements, why? Should be a single number.
-            },
-            os.path.join(results_dir, f"ep{epoch}_test" + model_name + ".pt"),
-        )
-
+        if results_dir is not None:
+            torch.save(
+                {
+                    "test_preds": test_preds,
+                    "test_tgts": test_tgts,
+                    "eval_score": eval_metric(
+                        test_preds, test_tgts
+                    ),  # FIXME eval_metric() here is a tuple of four elements, why? Should be a single number.
+                },
+                os.path.join(results_dir, f"ep{epoch}_test" + model_name + ".pt"),
+            )
         # train the model at least 60 epochs and do early stopping
         if early_stopping:
             if epoch > flag_params["min_epochs"] and np.mean(
@@ -358,19 +359,20 @@ def train_KKSeq2Seq(
         tensor_context_inps_test,
         tensor_context_tgts_test,
     )
-    torch.save(
-        {
-            "test_preds": test_preds,
-            "test_tgts": test_tgts,
-            "eval_score": eval_metric(
-                test_preds, test_tgts
-            ),  # FIXME eval_metric() here is a tuple of four elements, why? Should be a single number.
-            "train_rmses": all_train_rmses,
-            "eval_rmses": all_eval_rmses,
-            "training_runtime": training_runtime,
-        },
-        os.path.join(results_dir, "test_" + model_name + ".pt"),
-    )
+    if results_dir is not None:
+        torch.save(
+            {
+                "test_preds": test_preds,
+                "test_tgts": test_tgts,
+                "eval_score": eval_metric(
+                    test_preds, test_tgts
+                ),  # FIXME eval_metric() here is a tuple of four elements, why? Should be a single number.
+                "train_rmses": all_train_rmses,
+                "eval_rmses": all_eval_rmses,
+                "training_runtime": training_runtime,
+            },
+            os.path.join(results_dir, "test_" + model_name + ".pt"),
+        )
     # with open(os.path.join(results_dir, "test_" + model_name + ".json"), "w") as jsonfile:
     #     json.dump(
     #         {
@@ -441,7 +443,6 @@ def train_koopkernel_seq2seq_model(
     eval_metric = RMSE_TCTracks
 
     model_name = get_model_name(flag_params)
-    results_file_name = os.path.join(results_dir, model_name)
 
     rbf = RBFKernel(length_scale=flag_params["koopman_kernel_length_scale"])
     koopkernelmodel = NystroemKoopKernelSequencer(
@@ -468,11 +469,10 @@ def train_koopkernel_seq2seq_model(
         feature_list=feature_list,
         scaler=scaler,
         basin=basin,
+        flag_params=flag_params,
         log_file_handler=log_file_handler,
         results_dir=results_dir,
         model_name=model_name,
-        flag_params=flag_params,
-        results_file_name=results_file_name,
         save_model=save_model,
         early_stopping=early_stopping,
     )

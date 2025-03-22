@@ -111,13 +111,13 @@ The identified nonlinear features are sufficient to discriminate the basins reas
 
 ## Koopman Kernel Sequencer (kernel-based sequence model architecture)
 
-[see `examples/koopman_seq2seq_kernel.ipynb`, work in progress]
+[For details see `examples/koopman_kernel_sequencer.ipynb`]
 
 The [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) is a deep learning architecture inspired by the Koopman operator framework. However, there are some parts of the architecture that are not very well grounded in Koopman operator theory. An additional downside of the approach are potentially unsuitable observable functions (which are hard-coded in the architecture).
 
 To improve upon the Koopman Neural Forecaster, I develop a deep learning architecture that more directly combines Koopman kernel methods with a seq2seq architecture. Using kernels alleviates the problem of observable selection. However, kernels usually require to read in and process the full dataset, which is exactly what you do not want to do in seq2seq models. The implementation is using Nystroem kernel techniques.
 
-Below, evaluation RMSE are compared for the KNF and the Koopman Kernel Sequencer.
+Below, evaluation RMSE are compared for the KNF and the Koopman Kernel Sequencer. For details see `examples/koopman_kernel_sequencer.ipynb`, Sec. "Import trained model".
 
 ![KNF vs KoopKernelSequencer](./plots/scripts/knf_vs_KoopKernelSequencer.png)
 
