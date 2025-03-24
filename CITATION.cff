@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Brunner"
+  given-names: "Eric"
+  orcid: "https://orcid.org/0000-0001-7631-6528"
+title: "Koopman Kernel Sequencer for Tropical Cylone Forecasting"
+version: 0.0.1
+date-released: 2025-03-23
+url: "https://github.com/ejbrun/koopman_learning_tropical_cyclone"
