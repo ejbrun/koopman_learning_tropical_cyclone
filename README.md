@@ -6,7 +6,7 @@ The Koopman operator allows to capture complex, nonlinear dyanmics via a infinit
 
 In this project, the [CLIMADA](https://github.com/CLIMADA-project/climada_python) python package serves as a starting point providing the tropical cyclone data.
 For future development, apart from the data CLIMADA provides several functionalities for risk assessment and economic exposure analysis.
-Well-developed Koopman kernel methods implemented in the [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) package are used for spectral analysis and for forecasting comparisons. In addition to this, I develop a novel Koopman-kernel-based sequence processing model. The forecasting capabilities of this model I compare against the [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) [ref], an established machine learning model, combining ideas from the Koopman operator framework and the transformer architecture [ref]. A more detailed desciption of the project scope is given below.
+Well-developed Koopman kernel methods implemented in the [kooplearn](https://github.com/Machine-Learning-Dynamical-Systems/kooplearn) package are used for spectral analysis and for forecasting comparisons. In addition to this, I develop a novel Koopman-kernel-based sequence processing model, the [Koopman Kernel Sequencer](https://github.com/ejbrun/koopkernel_sequencer). Here I compare the forecasting capabilities of this model against the [Koopman Neural Forecaster](https://github.com/google-research/google-research/tree/master/KNF) (KNF) for the here considered tropical cylone track dataset. The KNF is an established machine learning model, combining ideas from the Koopman operator framework and the transformer architecture. A more detailed desciption of the project scope is given below.
 
 
 
@@ -62,7 +62,7 @@ The project has two main parts.
 
 The first part (Part I) focuses on analysing tropical cyclone tracks with Koopman-kernel methods, specifically analysing the spectral properties of the Koopman representation. I study the spectral consistency and implied time scale of the fitted Koopman operator. In addition, I propose a novel clustering methods based on the eigenfunctions of the Koopman operator. This eigenfunction clustering protocol allows to discriminate tropical cyclones from the five main cyclone basins, East Pacific (EP), North Atlantic (NA), South Indian Ocean (SI), South Pacific (SP) and West Pacific (WP), based on their dynamical signatures.
 
-In the second part (Part II), I develop a novel Koopman-based machine learning architecture, the Koopman Kernel Sequencer. The implementation can be found in the separate repository [ref]. Below I briefly discuss the motivations and potential benefits of this model, and compare the Koopman Kernel Sequencer model to the Koopman Neural Forecaster for the task of forecasting tropical cyclone tracks.
+In the second part (Part II), I develop and test a novel Koopman-based machine learning architecture, the Koopman Kernel Sequencer. The development of the model is done in a separate repository, [koopkernel_sequencer](https://github.com/ejbrun/koopkernel_sequencer). Below I briefly discuss motivation and potential benefits of this model, and compare it against the Koopman Neural Forecaster for the task of forecasting tropical cyclone tracks.
 
 
 ## Part I: Koopman kernel based trajectory analysis
