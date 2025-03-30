@@ -324,6 +324,8 @@ def standardize_TensorContextDataset(
     linear scaler, which transform the data by a affine linear transformation to a
     target rectangular domain.
 
+    TODO Combine with kkseq.data_utils.standardize_TensorContextDataset
+        For this the periodic shift needs to be extracted in separate function.
     TODO At the moment the TensorContextDataset is standardized, by flattening into an
     array of shape (-1, n_features). An alternative would be to standardize the
     data_array_list (output of data_array_list_from_TCTracks), by concatenating all
@@ -405,6 +407,7 @@ def standardize_time_series_list(
     target rectangular domain.
 
     FIXME add periodic_shift, see data_utils.periodic_shift()
+    TODO combine with kkseq.data_utils.standardize_TensorContextDataset
 
     Args:
         time_series_list (TensorContextDataset): _description_
@@ -542,6 +545,7 @@ def standardized_context_dataset_from_TCTracks(
         feature_list=feature_list,
         context_length=con_len,
         time_lag=time_lag,
+        backend=backend,
         verbose=verbose,
         **backend_kw
     )  

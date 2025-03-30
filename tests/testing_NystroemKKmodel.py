@@ -19,7 +19,6 @@ from sklearn.model_selection import train_test_split
 
 from klearn_tcyclone.data_utils import (
     LinearScaler,
-    standardized_context_dataset_from_TCTracks,
 )
 from klearn_tcyclone.koopkernel_sequencer_utils import (
     standardized_batched_context_from_TCTracks,
@@ -61,9 +60,6 @@ flag_params = extend_by_default_flag_values(flag_params)
 flag_params["batch_size"] = 32
 flag_params["num_epochs"] = 10
 # flag_params["num_epochs"] = 100
-flag_params["train_output_length"] = 1
-flag_params["test_output_length"] = flag_params["train_output_length"]
-flag_params["num_steps"] = 3
 flag_params["time_step_h"] = tc_tracks_time_step
 flag_params["basin"] = "NA"
 
@@ -94,9 +90,15 @@ flag_params["koopman_kernel_length_scale"] = 0.1
 flag_params["koopman_kernel_num_centers"] = 111
 
 
+# test_setting = {
+#     "context_mode": ["full_context"],
+#     "mask_koopman_operator": [True],
+#     "mask_version": [0],
+#     "use_nystroem_context_window": [False],
+#     "output_length": [3],
+# }
 test_setting = {
     "context_mode": ["full_context", "last_context"],
-    # "context_mode": ["no_context", "full_context", "last_context"],
     "mask_koopman_operator": [True, False],
     "mask_version": [0, 1],
     "use_nystroem_context_window": [True, False],
@@ -111,6 +113,7 @@ for (
     use_nystroem_context_window,
     output_length,
 ) in product(*test_setting.values()):
+    print("=================")
     print(
         context_mode,
         mask_koopman_operator,
@@ -120,6 +123,7 @@ for (
     )
 
     flag_params["train_output_length"] = output_length
+    flag_params["test_output_length"] = flag_params["train_output_length"]
 
     flag_params["context_mode"] = context_mode
     if flag_params["context_mode"] == "no_context":
@@ -141,16 +145,13 @@ for (
         raise Exception("input_length must be divisible by input_dim")
 
     scaler = LinearScaler()
-    num_feats = len(feature_list)
 
     rbf = RBFKernel(length_scale=flag_params["koopman_kernel_length_scale"])
     koopkernelmodel = NystroemKoopKernelSequencer(
         kernel=rbf,
-        input_dim=num_feats,
         input_length=flag_params["input_length"],
         output_length=flag_params["train_output_length"],
         output_dim=1,
-        num_steps=1,
         num_nys_centers=flag_params["koopman_kernel_num_centers"],
         rng_seed=42,
         context_mode=flag_params["context_mode"],
@@ -162,30 +163,6 @@ for (
     tc_tracks_train, tc_tracks_test = train_test_split(
         tc_tracks.data, test_size=0.1, random_state=flag_params["seed"]
     )
-
-    tensor_context_train_standardized = standardized_context_dataset_from_TCTracks(
-        tc_tracks_train,
-        feature_list=feature_list,
-        scaler=scaler,
-        context_length=flag_params["context_length"],
-        time_lag=1,
-        fit=True,
-        periodic_shift=True,
-        basin=flag_params["basin"],
-        input_length=flag_params["input_length"],
-        output_length=flag_params["train_output_length"],
-    )
-
-    koopkernelmodel._initialize_nystrom_data(tensor_context_train_standardized)
-    del tensor_context_train_standardized
-
-    # parameter_list = list(koopkernelmodel.parameters())
-
-    # # print(koopkernelmodel.koopman_blocks)
-
-    # for parameter in koopkernelmodel.parameters():
-    #     print(parameter)
-    #     print(parameter.shape)
 
     total_params = sum(p.numel() for p in koopkernelmodel.parameters())
     print(f"Number of parameters: {total_params}")
@@ -246,6 +223,11 @@ for (
     del tc_tracks_train
     del tc_tracks_valid
     del tc_tracks_test
+
+    koopkernelmodel._initialize_nystrom_data(
+        tensor_context_inps_train=tensor_context_inps_train,
+        tensor_context_tgts_train=tensor_context_tgts_train,
+    )
 
     optimizer = torch.optim.Adam(
         koopkernelmodel.parameters(), lr=flag_params["learning_rate"]

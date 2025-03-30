@@ -16,8 +16,8 @@ from kkseq.koopkernel_sequencer import (
     NystroemKoopKernelSequencer,
     RBFKernel,
 )
+from kkseq.data_utils import batch_tensor_context
 from kkseq.koopkernel_sequencer_utils import (
-    batch_tensor_context,
     eval_one_epoch,
     predict_koopkernel_sequencer,
     train_one_epoch,
@@ -63,6 +63,8 @@ def standardized_batched_context_from_TCTracks(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Generate standardized and batched tensor contexts for inputs and outputs.
 
+    TODO combine with kkseq.data_utils.standardized_batched_context_from_time_series_list
+    
     Args:
         tc_tracks (TCTracks): _description_
         batch_size (int): _description_
@@ -145,20 +147,21 @@ def train_KKSeq2Seq(
         feature_list (_type_): _description_
         scaler (_type_): _description_
         basin (str): _description_
-        input_length (int): _description_
-        output_length (int): _description_
-        decay_rate (float): _description_
-        learning_rate (float): _description_
+        flag_params (dict): _description_
         log_file_handler (_type_): _description_
         results_dir (str): _description_
         model_name (str): _description_
-        flag_params (dict): _description_
         save_model (str, optional): If model should be saved. For "best" only the best
             model is save, for "all" the model after each epoch is saved. For anything
             else, no model is saved. Defaults to "best".
+        split_valid_set (bool): If to split the training set into a training and a
+            validation set. Defaults to True.
         early_stopping (bool): If to apply early stopping. Defaults to False.
         backend (str, optional): _description_. Defaults to "auto".
-
+        **backend_kw (dict, optional): Keyword arguments to pass to the backend.
+            For example, if ``'torch'``, it is possible to specify the device of the
+            tensor.
+        
     Raises:
         ValueError: _description_
 
@@ -180,21 +183,21 @@ def train_KKSeq2Seq(
     else:
         tc_tracks_valid = tc_tracks_test
 
-    tensor_context_train_standardized = standardized_context_dataset_from_TCTracks(
-        tc_tracks_train,
-        feature_list=feature_list,
-        scaler=scaler,
-        context_length=flag_params["context_length"],
-        time_lag=1,
-        fit=True,
-        periodic_shift=True,
-        basin=basin,
-        input_length=flag_params["input_length"],
-        output_length=flag_params["train_output_length"],
-    )
+    # tensor_context_train_standardized = standardized_context_dataset_from_TCTracks(
+    #     tc_tracks_train,
+    #     feature_list=feature_list,
+    #     scaler=scaler,
+    #     context_length=flag_params["context_length"],
+    #     time_lag=1,
+    #     fit=True,
+    #     periodic_shift=True,
+    #     basin=basin,
+    #     input_length=flag_params["input_length"],
+    #     output_length=flag_params["train_output_length"],
+    # )
 
-    model._initialize_nystrom_data(tensor_context_train_standardized)
-    del tensor_context_train_standardized
+    # model._initialize_nystrom_data(tensor_context_train_standardized)
+    # del tensor_context_train_standardized
 
     tensor_context_inps_train, tensor_context_tgts_train = (
         standardized_batched_context_from_TCTracks(
@@ -252,6 +255,11 @@ def train_KKSeq2Seq(
     del tc_tracks_train
     del tc_tracks_valid
     del tc_tracks_test
+
+    model._initialize_nystrom_data(
+        tensor_context_inps_train=tensor_context_inps_train,
+        tensor_context_tgts_train=tensor_context_tgts_train,
+    )
 
     if flag_params["train_output_length"] == 1:
         assert torch.all(
@@ -438,8 +446,6 @@ def train_koopkernel_seq2seq_model(
     """
     scaler = LinearScaler()
 
-    num_feats = len(feature_list)
-
     eval_metric = RMSE_TCTracks
 
     model_name = get_model_name(flag_params)
@@ -447,11 +453,9 @@ def train_koopkernel_seq2seq_model(
     rbf = RBFKernel(length_scale=flag_params["koopman_kernel_length_scale"])
     koopkernelmodel = NystroemKoopKernelSequencer(
         kernel=rbf,
-        input_dim=num_feats,
         input_length=flag_params["input_length"],
         output_length=flag_params["train_output_length"],
         output_dim=1,
-        num_steps=1,
         num_nys_centers=flag_params["koopman_kernel_num_centers"],
         rng_seed=42,
         context_mode=flag_params["context_mode"],
